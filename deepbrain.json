@@ -1,0 +1,6 @@
+{
+  "engine": "pglite",
+  "database": "./deepbrain-data",
+  "embedding_provider": "gemini",
+  "data_dir": "./brain"
+}
