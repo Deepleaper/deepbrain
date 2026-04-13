@@ -1,12 +1,13 @@
 {
   "name": "deepbrain",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Personal AI brain. Store, search, and grow your knowledge.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "deepbrain": "dist/cli.js"
+    "deepbrain": "dist/cli.js",
+    "deepbrain-mcp": "dist/mcp.js"
   },
   "exports": {
     ".": {
@@ -41,8 +42,9 @@
     "deepbrain",
     "gbrain",
     "chinese",
-    "multi-provider",
-    "ollama",
+    "mcp",
+    "claude",
+    "cursor",
     "deepseek",
     "gemini"
   ],
@@ -54,6 +56,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "agentkits": "^0.2.0"
   },
   "devDependencies": {
