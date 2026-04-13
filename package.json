@@ -1,6 +1,6 @@
 {
   "name": "deepbrain",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Personal AI brain. Store, search, and grow your knowledge.",
   "type": "module",
   "main": "dist/index.js",
@@ -25,6 +25,10 @@
     "./import": {
       "import": "./dist/import/index.js",
       "types": "./dist/import/index.d.ts"
+    },
+    "./tag-graph": {
+      "import": "./dist/tag-graph/index.js",
+      "types": "./dist/tag-graph/index.d.ts"
     }
   },
   "scripts": {

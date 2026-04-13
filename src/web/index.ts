@@ -11,6 +11,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { Brain } from '../core/brain.js';
+import { TagGraph } from '../tag-graph/index.js';
 import type { DeepBrainConfig } from '../core/types.js';
 
 export interface WebUIConfig {
@@ -63,7 +64,7 @@ ${nav ? `<nav><div class="container">${nav}</div></nav>` : ''}
 <footer>DeepBrain — Your AI-powered second brain</footer>
 </body></html>`;
 
-const NAV = `<a href="/">📚 Pages</a><a href="/search">🔍 Search</a><a href="/stats">📊 Stats</a>`;
+const NAV = `<a href="/">📚 Pages</a><a href="/search">🔍 Search</a><a href="/tags">🏷️ Tags</a><a href="/stats">📊 Stats</a>`;
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -99,6 +100,7 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
 
   const brain = new Brain(config.brainConfig ?? {});
   await brain.connect();
+  const tagGraph = new TagGraph(brain);
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = req.url ?? '/';
@@ -148,6 +150,31 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
           </form></div>${results}`;
         res.end(HTML_SHELL('Search', body, NAV));
 
+      } else if (path === '/tags') {
+        const tree = await tagGraph.getTree();
+        const allTags = await tagGraph.getAllTags();
+
+        const renderTree = (nodes: any[], indent = 0): string => {
+          return nodes.map(n => {
+            const pad = '&nbsp;'.repeat(indent * 4);
+            const childHtml = n.children.length > 0 ? renderTree(n.children, indent + 1) : '';
+            return `<div>${pad}<span class="tag">${esc(n.tag)}</span> <span class="meta">(${n.count})</span>${childHtml}</div>`;
+          }).join('');
+        };
+
+        const tagCloud = allTags.slice(0, 50).map(t =>
+          `<span class="tag" style="font-size:${Math.min(2, 0.8 + t.count * 0.15)}em">${esc(t.tag)}</span>`
+        ).join(' ');
+
+        const body = `<h2>🏷️ Tag Graph</h2>
+          <h3>Tag Cloud</h3><div style="line-height:2.5;margin:16px 0">${tagCloud || '<span class="meta">No tags yet</span>'}</div>
+          <h3>Tag Tree</h3><div class="page-body">${tree.length > 0 ? renderTree(tree) : '<span class="meta">No hierarchical tags</span>'}</div>
+          <h3>All Tags (${allTags.length})</h3>
+          <ul class="page-list">${allTags.map(t =>
+            `<li><span class="tag">${esc(t.tag)}</span> — ${t.count} page${t.count > 1 ? 's' : ''}</li>`
+          ).join('')}</ul>`;
+        res.end(HTML_SHELL('Tags', body, NAV));
+
       } else if (path === '/stats') {
         const stats = await brain.stats();
         const body = `<h2>📊 Stats</h2><div class="stats">
@@ -169,6 +196,26 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
         res.setHeader('Content-Type', 'application/json');
         const pages = await brain.list();
         res.end(JSON.stringify({ pages }));
+
+      } else if (path === '/api/tags') {
+        res.setHeader('Content-Type', 'application/json');
+        const graph = await tagGraph.getGraph();
+        res.end(JSON.stringify(graph));
+
+      } else if (path === '/api/tags/tree') {
+        res.setHeader('Content-Type', 'application/json');
+        const tree = await tagGraph.getTree();
+        res.end(JSON.stringify({ tree }));
+
+      } else if (path === '/api/tags/recommend' && query.slug) {
+        res.setHeader('Content-Type', 'application/json');
+        const recs = await tagGraph.recommend(query.slug, parseInt(query.limit ?? '5'));
+        res.end(JSON.stringify({ slug: query.slug, recommendations: recs }));
+
+      } else if (path === '/api/tags/clusters') {
+        res.setHeader('Content-Type', 'application/json');
+        const clusters = await tagGraph.cluster(parseInt(query.min ?? '2'));
+        res.end(JSON.stringify({ clusters }));
 
       } else {
         res.statusCode = 404;

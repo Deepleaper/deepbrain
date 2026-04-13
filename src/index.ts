@@ -30,3 +30,10 @@ export type { WebUIConfig } from './web/index.js';
 // Browser Clipper
 export { clipPage, clipSelection, generateBookmarklet } from './clipper/index.js';
 export type { ClipResult } from './clipper/index.js';
+
+// Tag Graph
+export { TagGraph } from './tag-graph/index.js';
+export type {
+  TagNode, TagEdge, TagGraphData,
+  TagRecommendation, TagCluster, TagTreeNode,
+} from './tag-graph/index.js';
