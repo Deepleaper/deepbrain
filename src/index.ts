@@ -15,3 +15,7 @@ export type {
 export { DEFAULT_CONFIG } from './core/types.js';
 export { dream } from './dream/index.js';
 export type { DreamReport, DreamConfig } from './dream/index.js';
+export { importNotion } from './import/notion.js';
+export { importObsidian } from './import/obsidian.js';
+export type { ImportResult, ImportOptions } from './import/notion.js';
+export type { ObsidianImportOptions } from './import/obsidian.js';

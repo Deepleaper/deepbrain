@@ -1,6 +1,6 @@
 {
   "name": "deepbrain",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Personal AI brain. Store, search, and grow your knowledge.",
   "type": "module",
   "main": "dist/index.js",
@@ -21,6 +21,10 @@
     "./dream": {
       "import": "./dist/dream/index.js",
       "types": "./dist/dream/index.d.ts"
+    },
+    "./import": {
+      "import": "./dist/import/index.js",
+      "types": "./dist/import/index.d.ts"
     }
   },
   "scripts": {
@@ -42,6 +46,9 @@
     "deepbrain",
     "gbrain",
     "chinese",
+    "notion",
+    "obsidian",
+    "import",
     "mcp",
     "claude",
     "cursor",
