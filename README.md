@@ -152,6 +152,69 @@ deepbrain
 
 **Dependencies:** Only `@electric-sql/pglite` + `agentkits` (which wraps `openai` SDK).
 
+## MCP Server (Claude / Cursor / OpenClaw)
+
+DeepBrain ships with a built-in MCP server. Your AI assistant can read/write your brain directly.
+
+### Setup
+
+Add to your Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "deepbrain": {
+      "command": "deepbrain-mcp",
+      "env": {
+        "DEEPBRAIN_CONFIG": "/path/to/your/deepbrain.json"
+      }
+    }
+  }
+}
+```
+
+Or for Cursor (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "deepbrain": {
+      "command": "deepbrain-mcp",
+      "env": {
+        "DEEPBRAIN_CONFIG": "/path/to/your/deepbrain.json"
+      }
+    }
+  }
+}
+```
+
+### Available Tools (12)
+
+| Tool | Description |
+|------|-------------|
+| `brain_put` | Store or update knowledge |
+| `brain_get` | Read a specific page |
+| `brain_query` | Semantic search (hybrid: vector + keyword + RRF) |
+| `brain_search` | Keyword search |
+| `brain_link` | Create a link between pages |
+| `brain_unlink` | Remove a link |
+| `brain_tag` | Tag a page |
+| `brain_timeline` | Add timeline entry (append-only) |
+| `brain_stats` | Brain statistics |
+| `brain_list` | List all pages |
+| `brain_delete` | Delete a page |
+| `brain_dream` | Run Dream Cycle (maintenance) |
+
+### Example Conversation
+
+> **You:** What do I know about Ray?
+>
+> **Claude:** *uses brain_query("Ray")* → Found: Ray Wang, CEO of Deepleaper, AI context intelligence expert.
+>
+> **You:** Add that he spoke at the AI Summit yesterday.
+>
+> **Claude:** *uses brain_timeline("ray", "Spoke at AI Summit 2026")*  → ✅ Timeline added.
+
 ## Roadmap
 
 - [x] Core engine (CRUD, search, graph, timeline)
@@ -159,7 +222,8 @@ deepbrain
 - [x] CLI
 - [x] Dream Cycle v1
 - [x] Multi-provider embedding (via agentkits)
-- [ ] MCP Server (for Claude/Cursor/OpenClaw integration)
+- [x] MCP Server (12 tools for Claude/Cursor/OpenClaw)
+- [x] Multi-provider embedding (via agentkits)
 - [ ] Web UI (knowledge graph visualization)
 - [ ] Import from Notion / Obsidian / WeChat
 - [ ] MRG layer (mission-centric knowledge graph)
