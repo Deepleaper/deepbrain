@@ -1,6 +1,6 @@
 {
   "name": "deepbrain",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Personal AI brain. Store, search, and grow your knowledge.",
   "type": "module",
   "main": "dist/index.js",
@@ -41,6 +41,10 @@
     "./backup": {
       "import": "./dist/backup.js",
       "types": "./dist/backup.d.ts"
+    },
+    "./collab": {
+      "import": "./dist/collab.js",
+      "types": "./dist/collab.d.ts"
     },
     "./templates": {
       "import": "./dist/templates.js",
@@ -96,7 +100,12 @@
     "dream-cycle",
     "hybrid-search",
     "ollama",
-    "local-first"
+    "local-first",
+    "github-importer",
+    "youtube-transcript",
+    "rss-reader",
+    "collaborative",
+    "static-site"
   ],
   "homepage": "https://github.com/Magicray1217/deepbrain#readme",
   "author": "Magicray1217",

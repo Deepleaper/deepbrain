@@ -77,3 +77,9 @@ export type { FlowUsImportOptions } from './flowus.js';
 
 export { importSiyuan } from './siyuan.js';
 export type { SiyuanImportOptions } from './siyuan.js';
+
+export { importGitHubRepo, importGitHubStars } from './github.js';
+export type { GitHubRepoImportOptions, GitHubStarsImportOptions, GitHubImportResult } from './github.js';
+
+export { importYouTube } from './youtube.js';
+export type { YouTubeImportOptions, YouTubeImportResult } from './youtube.js';

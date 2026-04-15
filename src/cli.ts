@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * DeepBrain — CLI
+ * DeepBrain - CLI
  *
  * Commands:
  *   deepbrain init [provider]          Initialize a new brain
@@ -52,6 +52,10 @@ import { watchObsidianVault } from './sync/obsidian-watcher.js';
 import { findConnections, formatConnections } from './connections.js';
 import { backupBrain, restoreBrain } from './backup.js';
 import { applyTemplate, listTemplates, TEMPLATES } from './templates.js';
+import { importGitHubRepo, importGitHubStars } from './import/github.js';
+import { importYouTube } from './import/youtube.js';
+import { addFeed, removeFeed, listFeeds, syncRssFeeds } from './sync/rss.js';
+import { serveSharedBrain, exportStaticSite } from './collab.js';
 
 // ── Multi-brain helpers ──────────────────────────────────────────
 
@@ -360,7 +364,7 @@ async function main() {
       } else {
         console.log(`\n🔍 ${results.length} results for "${text}"\n`);
         for (const r of results) {
-          console.log(`  📄 ${r.slug} (${r.type}) — score: ${r.score.toFixed(4)}`);
+          console.log(`  📄 ${r.slug} (${r.type}) - score: ${r.score.toFixed(4)}`);
           console.log(`     ${r.chunk_text.slice(0, 120)}...\n`);
         }
       }
@@ -407,7 +411,7 @@ async function main() {
         } else {
           console.log(`\n🔑 ${results.length} results for "${keyword}"\n`);
           for (const r of results) {
-            console.log(`  📄 ${r.slug} (${r.type}) — score: ${r.score.toFixed(4)}`);
+            console.log(`  📄 ${r.slug} (${r.type}) - score: ${r.score.toFixed(4)}`);
             console.log(`     ${r.chunk_text.slice(0, 120)}...\n`);
           }
         }
@@ -692,13 +696,13 @@ async function main() {
       break;
     }
 
-    case 'share': {
+    case 'share-with': {
       const target = args[1];
       const userResult = extractFlag(args, '--with', '');
       const permResult = extractFlag(args.slice(0), '--permission', 'read');
 
       if (!target || !userResult.value) {
-        console.error('Usage: deepbrain share <brain> --with <user> [--permission read|write|admin]');
+        console.error('Usage: deepbrain share-with <brain> --with <user> [--permission read|write|admin]');
         break;
       }
 
@@ -739,7 +743,7 @@ async function main() {
         dryRun: dryRunResult.present,
       });
       console.log(formatMergeResult(result));
-      if (dryRunResult.present) console.log('\n   (dry run — no changes made)');
+      if (dryRunResult.present) console.log('\n   (dry run - no changes made)');
       await source.disconnect();
       await target.disconnect();
       break;
@@ -802,39 +806,6 @@ async function main() {
       const tagged = results.filter(r => !r.skipped).length;
       console.log(t('retag.done', { count: String(tagged) }));
       await brain.disconnect();
-      break;
-    }
-
-    case 'sync': {
-      const sub = args[1];
-      if (sub === 'notion') {
-        const tokenResult = extractFlag(args, '--token', '');
-        args = tokenResult.args;
-        const dbResult = extractFlag(args, '--database', '');
-        args = dbResult.args;
-        const prefixResult = extractFlag(args, '--prefix', 'notion/');
-        args = prefixResult.args;
-
-        if (!tokenResult.value || !dbResult.value) {
-          console.error('Usage: deepbrain sync notion --token <token> --database <id> [--prefix notion/]');
-          break;
-        }
-
-        const brain = await getBrain(brainName);
-        const result = await syncNotion(brain, {
-          token: tokenResult.value,
-          databaseId: dbResult.value,
-          prefix: prefixResult.value,
-          onProgress: (msg) => console.log(msg),
-        });
-        console.log(`\n📊 Synced: ${result.synced}, Skipped: ${result.skipped}, Errors: ${result.errors.length}`);
-        if (result.errors.length > 0) {
-          result.errors.forEach(e => console.log(`  ⚠️ ${e.pageId}: ${e.error}`));
-        }
-        await brain.disconnect();
-      } else {
-        console.error('Usage: deepbrain sync notion --token <token> --database <id>');
-      }
       break;
     }
 
@@ -1061,9 +1032,184 @@ async function main() {
       break;
     }
 
+    // 🆕 v1.5.0 Commands ──────────────────────────────────────
+
+    case 'import': {
+      const sub = args[1];
+      if (sub === 'github') {
+        const repoResult = extractFlag(args, '--repo', '');
+        args = repoResult.args;
+        const tokenResult = extractFlag(args, '--token', process.env.GITHUB_TOKEN ?? '');
+        args = tokenResult.args;
+
+        if (!repoResult.value) { console.error('Usage: deepbrain import github --repo owner/repo [--token TOKEN]'); break; }
+
+        const brain = await getBrain(brainName);
+        const result = await importGitHubRepo(brain, {
+          repo: repoResult.value,
+          token: tokenResult.value || undefined,
+          onProgress: console.log,
+        });
+        console.log(`\n✅ GitHub import: ${result.imported} pages imported, ${result.skipped} skipped`);
+        if (result.errors.length > 0) result.errors.forEach(e => console.log(`  ❌ ${e}`));
+        await brain.disconnect();
+
+      } else if (sub === 'github-stars') {
+        const userResult = extractFlag(args, '--user', '');
+        args = userResult.args;
+        const limitResult = extractFlag(args, '--limit', '100');
+        args = limitResult.args;
+        const tokenResult = extractFlag(args, '--token', process.env.GITHUB_TOKEN ?? '');
+        args = tokenResult.args;
+
+        if (!userResult.value) { console.error('Usage: deepbrain import github-stars --user <username> [--limit 100] [--token TOKEN]'); break; }
+
+        const brain = await getBrain(brainName);
+        const result = await importGitHubStars(brain, {
+          user: userResult.value,
+          limit: parseInt(limitResult.value),
+          token: tokenResult.value || undefined,
+          onProgress: console.log,
+        });
+        console.log(`\n✅ Stars import: ${result.imported} repos imported`);
+        if (result.errors.length > 0) result.errors.forEach(e => console.log(`  ❌ ${e}`));
+        await brain.disconnect();
+
+      } else if (sub === 'youtube') {
+        const url = args[2];
+        if (!url) { console.error('Usage: deepbrain import youtube <url>'); break; }
+
+        const config = loadConfig(brainName);
+        const brain = await getBrain(brainName);
+        const result = await importYouTube(brain, {
+          url,
+          summarize: true,
+          provider: config.llm_provider ?? config.embedding_provider,
+          model: config.llm_model,
+          apiKey: config.api_key,
+          onProgress: console.log,
+        });
+        console.log(`\n✅ YouTube imported: "${result.title}" (${result.transcript_length} chars)`);
+        await brain.disconnect();
+
+      } else {
+        console.error('Usage: deepbrain import <github|github-stars|youtube> [options]');
+      }
+      break;
+    }
+
+    case 'sync': {
+      const sub = args[1];
+      if (sub === 'notion') {
+        const tokenResult = extractFlag(args, '--token', '');
+        args = tokenResult.args;
+        const dbResult = extractFlag(args, '--database', '');
+        args = dbResult.args;
+        const prefixResult = extractFlag(args, '--prefix', 'notion/');
+        args = prefixResult.args;
+
+        if (!tokenResult.value || !dbResult.value) {
+          console.error('Usage: deepbrain sync notion --token <token> --database <id> [--prefix notion/]');
+          break;
+        }
+
+        const brain = await getBrain(brainName);
+        const result = await syncNotion(brain, {
+          token: tokenResult.value,
+          databaseId: dbResult.value,
+          prefix: prefixResult.value,
+          onProgress: (msg) => console.log(msg),
+        });
+        console.log(`\n📋 Synced: ${result.synced}, Skipped: ${result.skipped}, Errors: ${result.errors.length}`);
+        if (result.errors.length > 0) {
+          result.errors.forEach(e => console.log(`  ⚠️ ${e.pageId}: ${e.error}`));
+        }
+        await brain.disconnect();
+
+      } else if (sub === 'rss') {
+        const addResult = extractFlag(args, '--add', '');
+        args = addResult.args;
+        const removeResult = extractFlag(args, '--remove', '');
+        args = removeResult.args;
+        const listFlag = hasFlag(args, '--list');
+        args = listFlag.args;
+        const runFlag = hasFlag(args, '--run');
+        args = runFlag.args;
+
+        const config = loadConfig(brainName);
+        const dataDir = config.data_dir ?? './brain';
+
+        if (addResult.value) {
+          const feed = addFeed(dataDir, addResult.value);
+          console.log(`✅ RSS feed added: ${addResult.value}`);
+        } else if (removeResult.value) {
+          if (removeFeed(dataDir, removeResult.value)) {
+            console.log(`✅ RSS feed removed: ${removeResult.value}`);
+          } else {
+            console.log(`❌ Feed not found: ${removeResult.value}`);
+          }
+        } else if (listFlag.present) {
+          const feeds = listFeeds(dataDir);
+          if (feeds.length === 0) {
+            console.log('\n📡 No RSS feeds subscribed.\n   Use: deepbrain sync rss --add <url>\n');
+          } else {
+            console.log(`\n📡 ${feeds.length} RSS feeds:\n`);
+            for (const f of feeds) {
+              console.log(`  ${f.title ?? f.url}`);
+              console.log(`    URL: ${f.url}`);
+              console.log(`    Last fetched: ${f.lastFetched ?? 'never'}\n`);
+            }
+          }
+        } else if (runFlag.present) {
+          const brain = await getBrain(brainName);
+          console.log('\n📡 Syncing RSS feeds...');
+          const result = await syncRssFeeds(brain, {
+            dataDir,
+            onProgress: console.log,
+          });
+          console.log(`\n✅ RSS sync: ${result.fetched} feeds fetched, ${result.imported} articles imported`);
+          if (result.errors.length > 0) result.errors.forEach(e => console.log(`  ❌ ${e}`));
+          await brain.disconnect();
+        } else {
+          console.error('Usage: deepbrain sync rss --add <url> | --remove <url> | --list | --run');
+        }
+      } else {
+        console.error('Usage: deepbrain sync <notion|rss> [options]');
+      }
+      break;
+    }
+
+    case 'share': {
+      // v1.5.0: serve shared brain web UI
+      const portResult = extractFlag(args, '--port', '8080');
+      args = portResult.args;
+      const hostResult = extractFlag(args, '--host', '0.0.0.0');
+      args = hostResult.args;
+      const titleResult = extractFlag(args, '--title', 'DeepBrain');
+      args = titleResult.args;
+      const exportResult = extractFlag(args, '--export', '');
+      args = exportResult.args;
+
+      const brain = await getBrain(brainName);
+
+      if (exportResult.value) {
+        console.log(`\n📦 Exporting static site to ${exportResult.value}...`);
+        const result = await exportStaticSite(brain, exportResult.value, titleResult.value);
+        console.log(`✅ Exported ${result.pages} pages to ${result.outputDir}\n`);
+        await brain.disconnect();
+      } else {
+        await serveSharedBrain(brain, {
+          port: parseInt(portResult.value),
+          host: hostResult.value,
+          title: titleResult.value,
+        });
+      }
+      break;
+    }
+
     default:
       console.log(`
-🧠 DeepBrain — Personal AI Brain
+🧠 DeepBrain - Personal AI Brain
 
 Commands:
   deepbrain init [provider]              Initialize (default: ollama)
@@ -1074,6 +1220,15 @@ Commands:
   deepbrain search "keyword"             Keyword search
   deepbrain chat "question"              Chat with your brain (RAG)
   deepbrain chat "q" --brains a,b,c      Chat across multiple brains
+  deepbrain import github --repo o/r     Import GitHub repo (README, docs, wiki)
+  deepbrain import github-stars --user u Import starred repos as knowledge
+  deepbrain import youtube <url>         Import YouTube transcript + summary
+  deepbrain sync rss --add <url>         Subscribe to RSS feed
+  deepbrain sync rss --run               Fetch all RSS feeds
+  deepbrain sync rss --list              List RSS subscriptions
+  deepbrain sync notion --token T --database D   Sync from Notion database
+  deepbrain share [--port 8080]          Serve read-only shared brain UI
+  deepbrain share --export ./site        Export brain as static HTML site
   deepbrain flashcards generate [slugs]  Generate Q&A flashcards from pages
   deepbrain flashcards review            Review due flashcards (SM-2)
   deepbrain flashcards stats             Flashcard statistics
