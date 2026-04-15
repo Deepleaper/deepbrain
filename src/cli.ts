@@ -27,6 +27,11 @@ import { dream } from './dream/index.js';
 import { chatWithBrain } from './commands/chat.js';
 import { createChat } from 'agentkits';
 import type { ChatMessage } from 'agentkits';
+import { parseOp, executeOp } from './operations.js';
+import { injectMemories, formatInjection } from './proactive.js';
+import { getTierStats, runTierCycle, setTier, getCoreContext, type MemoryTier } from './memory-tiers.js';
+import { getKnowledgeEvolution, formatTimeline } from './temporal.js';
+import { runCompression, compressPage } from './compression.js';
 
 // ── Multi-brain helpers ──────────────────────────────────────────
 
@@ -471,6 +476,96 @@ async function main() {
       break;
     }
 
+    // ── New v0.9.0 Commands ──────────────────────────────────────
+
+    case 'op': {
+      const dsl = args.slice(1).join(' ');
+      if (!dsl) { console.error('Usage: deepbrain op "MERGE topic:AI topic:ML"'); break; }
+      const brain = await getBrain(brainName);
+      const op = parseOp(dsl);
+      console.log(`⚙️  Executing: ${op.type}`, op.args);
+      const result = await executeOp(brain, op);
+      console.log(result.success ? `✅ ${result.message}` : `❌ ${result.message}`);
+      if (result.affected.length > 0) console.log(`   Affected: ${result.affected.join(', ')}`);
+      await brain.disconnect();
+      break;
+    }
+
+    case 'inject': {
+      const message = args.slice(1).join(' ');
+      if (!message) { console.error('Usage: deepbrain inject "I\'m preparing for the board meeting"'); break; }
+      const brain = await getBrain(brainName);
+      const result = await injectMemories(brain, message);
+      if (result.memories.length === 0) {
+        console.log('No relevant memories found.');
+      } else {
+        console.log(formatInjection(result));
+        console.log(`\n📊 ${result.memories.length} memories, ~${result.totalTokensEstimate} tokens`);
+      }
+      await brain.disconnect();
+      break;
+    }
+
+    case 'tiers': {
+      const sub = args[1];
+      const brain = await getBrain(brainName);
+      if (sub === 'stats') {
+        const stats = await getTierStats(brain);
+        console.log(`\n🏗️  Memory Tiers:`);
+        console.log(`   Core:     ${stats.core}`);
+        console.log(`   Working:  ${stats.working}`);
+        console.log(`   Archival: ${stats.archival}`);
+      } else if (sub === 'cycle') {
+        const result = await runTierCycle(brain);
+        console.log(`🔄 Tier cycle complete: ${result.promoted.length} promoted, ${result.demoted.length} demoted`);
+      } else if (sub === 'set' && args[2] && args[3]) {
+        await setTier(brain, args[2], args[3] as MemoryTier);
+        console.log(`✅ Set "${args[2]}" to tier: ${args[3]}`);
+      } else if (sub === 'core') {
+        console.log(await getCoreContext(brain) || 'No core memories.');
+      } else {
+        console.error('Usage: deepbrain tiers [stats|cycle|core|set <slug> <tier>]');
+      }
+      await brain.disconnect();
+      break;
+    }
+
+    case 'temporal':
+    case 'tl-view': {
+      const slug = args[1];
+      if (!slug) { console.error('Usage: deepbrain temporal <slug>'); break; }
+      const brain = await getBrain(brainName);
+      const evolution = await getKnowledgeEvolution(brain, slug);
+      if (evolution) {
+        console.log(formatTimeline(evolution));
+      } else {
+        console.log(`Page not found: ${slug}`);
+      }
+      await brain.disconnect();
+      break;
+    }
+
+    case 'compress': {
+      const slug = args[1];
+      const brain = await getBrain(brainName);
+      if (slug) {
+        const result = await compressPage(brain, slug);
+        if (result) {
+          console.log(`🗜️  Compressed "${slug}": ${result.originalLength} → ${result.compressedLength} chars (${(result.ratio * 100).toFixed(0)}%)`);
+        } else {
+          console.log('Nothing to compress (too short, already compressed, or not found).');
+        }
+      } else {
+        const results = await runCompression(brain);
+        console.log(`🗜️  Compressed ${results.length} pages`);
+        for (const r of results) {
+          console.log(`   ${r.slug}: ${r.originalLength} → ${r.compressedLength} (${(r.ratio * 100).toFixed(0)}%)`);
+        }
+      }
+      await brain.disconnect();
+      break;
+    }
+
     default:
       console.log(`
 🧠 DeepBrain — Personal AI Brain
@@ -488,6 +583,11 @@ Commands:
   deepbrain list [--type X]              List pages
   deepbrain list-brains                  List all brains
   deepbrain dream                        Run Dream Cycle (maintenance)
+  deepbrain op "MERGE topic:AI topic:ML" Memory operation DSL
+  deepbrain inject "preparing for..."    Proactive memory injection
+  deepbrain tiers [stats|cycle|core]     Memory tier management
+  deepbrain temporal <slug>              Knowledge evolution timeline
+  deepbrain compress [slug]              Compress old memories
 
 Flags:
   --brain <name>                         Use a named brain (default: "default")

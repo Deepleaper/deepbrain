@@ -37,3 +37,23 @@ export type {
   TagNode, TagEdge, TagGraphData,
   TagRecommendation, TagCluster, TagTreeNode,
 } from './tag-graph/index.js';
+
+// Memory Operations DSL
+export { parseOp, executeOp } from './operations.js';
+export type { OpType, MemoryOp, OpResult } from './operations.js';
+
+// Proactive Memory Injection
+export { injectMemories, formatInjection } from './proactive.js';
+export type { InjectionConfig, InjectedMemory, InjectionResult } from './proactive.js';
+
+// Memory Tiers
+export { getByTier, getTierStats, setTier, runTierCycle, getCoreContext, recordAccess } from './memory-tiers.js';
+export type { MemoryTier, TierConfig, TierStats } from './memory-tiers.js';
+
+// Temporal Tracking
+export { storeWithTemporal, queryAsOf, getKnowledgeEvolution, formatTimeline } from './temporal.js';
+export type { TemporalMetadata, TemporalSnapshot, KnowledgeEvolution } from './temporal.js';
+
+// Memory Compression
+export { compressText, compressPage, runCompression, getFullVersion } from './compression.js';
+export type { CompressionConfig, CompressionResult } from './compression.js';
