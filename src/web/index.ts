@@ -15,6 +15,7 @@ import { TagGraph } from '../tag-graph/index.js';
 import type { DeepBrainConfig } from '../core/types.js';
 import { t, getLocale, setLocale, type Locale } from '../i18n.js';
 import { fireWebhook, loadWebhookConfig, type WebhookConfig } from '../webhooks.js';
+import { findConnections } from '../connections.js';
 
 export interface WebUIConfig {
   port?: number;
@@ -162,6 +163,8 @@ const htmlShell = (title: string, body: string, activePath: string, sidebarPages
       <a class="nav-item${activePath === '/search' ? ' active' : ''}" href="/search">🔍 ${t('web.search')}</a>
       <a class="nav-item${activePath === '/graph-view' ? ' active' : ''}" href="/graph-view">🕸️ ${t('web.graph')}</a>
       <a class="nav-item${activePath === '/tags' ? ' active' : ''}" href="/tags">🏷️ ${t('web.tags')}</a>
+      <a class="nav-item${activePath === '/timeline' ? ' active' : ''}" href="/timeline">📅 Timeline</a>
+      <a class="nav-item${activePath === '/analytics' ? ' active' : ''}" href="/analytics">📈 Analytics</a>
       <a class="nav-item${activePath === '/stats' ? ' active' : ''}" href="/stats">📊 ${t('web.stats')}</a>
     </div>
     <div class="sidebar-section">
@@ -332,11 +335,29 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
           ...(fm.auto_tags ? [['Auto Tags', (fm.auto_tags as string[]).join(', ')]] : []),
         ].map(([k, v]) => `<div class="meta-row"><span class="meta-key">${k}</span><span class="meta-val">${esc(String(v))}</span></div>`).join('');
 
-        const body = `<div class="page-header"><h2>${esc(page.title)}</h2>
+        let body = `<div class="page-header"><h2>${esc(page.title)}</h2>
           <div class="page-meta">${tagHtml}<span class="tag">${esc(page.type)}</span></div></div>
           <div class="page-body">${mdToHtml(page.compiled_truth)}</div>
           <div class="meta-panel"><h3>${t('web.metadata')}</h3>${metaRows}</div>
           ${page.timeline ? `<div class="meta-panel"><h3>Timeline</h3><div class="page-body">${mdToHtml(page.timeline)}</div></div>` : ''}`;
+
+        // Add related knowledge (smart connections)
+        try {
+          const connections = await findConnections(brain, slug, 5);
+          if (connections && connections.connections.length > 0) {
+            const relatedHtml = connections.connections.map(c =>
+              `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+                <a href="/page/${encodeURIComponent(c.slug)}">${esc(c.title)}</a>
+                <span class="tag">${esc(c.type)}</span>
+                ${c.sharedTags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}
+                <span style="color:var(--text2);font-size:.78em;float:right">${c.score.toFixed(3)}</span>
+              </div>`
+            ).join('');
+            body += `<div class="meta-panel"><h3>🔗 Related Knowledge</h3>${relatedHtml}</div>`;
+          }
+        } catch { /* connections are best-effort */ }
+
+        body += ''; // ensure variable is used
         res.end(htmlShell(page.title, body, '', sidebarPages));
 
       } else if (path === '/search') {
@@ -417,6 +438,160 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
         res.end(htmlShell(t('web.stats'), body, '/stats', sidebarPages));
 
       // ── API endpoints (kept from v1.0) ──
+      } else if (path === '/timeline') {
+        // Timeline view: show all pages chronologically
+        const pages = await brain.list({ limit: 200 });
+        // Sort by created_at ascending for timeline
+        const sorted = [...pages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        // Group by month
+        const groups = new Map<string, typeof pages>();
+        for (const p of sorted) {
+          const d = new Date(p.created_at);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(p);
+        }
+
+        // Filter params
+        const filterTag = query.tag ?? '';
+        const filterAfter = query.after ?? '';
+        const filterBefore = query.before ?? '';
+        const filterSource = query.source ?? '';
+
+        let filteredPages = sorted;
+        if (filterTag) filteredPages = filteredPages.filter(p => (p.frontmatter as any)?.auto_tags?.includes(filterTag));
+        if (filterAfter) filteredPages = filteredPages.filter(p => new Date(p.created_at) >= new Date(filterAfter));
+        if (filterBefore) filteredPages = filteredPages.filter(p => new Date(p.created_at) <= new Date(filterBefore));
+        if (filterSource) filteredPages = filteredPages.filter(p => (p.frontmatter as any)?.source === filterSource);
+
+        const timelineHtml = filteredPages.length === 0
+          ? '<div class="empty"><div class="icon">📅</div><p>No entries found</p></div>'
+          : `<div class="timeline-container">${filteredPages.map(p => {
+              const d = new Date(p.created_at);
+              const dateStr = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+              const tags = ((p.frontmatter as any)?.auto_tags ?? []) as string[];
+              return `<div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-date">${dateStr}</div>
+                <div class="timeline-card card">
+                  <h3><a href="/page/${encodeURIComponent(p.slug)}">${esc(p.title)}</a></h3>
+                  <div class="meta"><span class="tag">${esc(p.type)}</span>${tags.map(t => ` <span class="tag">${esc(t)}</span>`).join('')}</div>
+                  <div class="preview">${esc(p.compiled_truth.slice(0, 150))}</div>
+                </div>
+              </div>`;
+            }).join('')}</div>`;
+
+        const filterForm = `<div class="card" style="margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+          <form action="/timeline" method="GET" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+            <label style="font-size:.82em;color:var(--text2)">After<br><input name="after" type="date" value="${esc(filterAfter)}" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px"></label>
+            <label style="font-size:.82em;color:var(--text2)">Before<br><input name="before" type="date" value="${esc(filterBefore)}" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px"></label>
+            <label style="font-size:.82em;color:var(--text2)">Tag<br><input name="tag" value="${esc(filterTag)}" placeholder="tag" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;width:120px"></label>
+            <label style="font-size:.82em;color:var(--text2)">Source<br><input name="source" value="${esc(filterSource)}" placeholder="source" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;width:120px"></label>
+            <button type="submit" class="graph-btn" style="height:34px">Filter</button>
+          </form>
+        </div>`;
+
+        const timelineCSS = `<style>
+          .timeline-container{position:relative;padding-left:32px;border-left:2px solid var(--accent)}
+          .timeline-item{position:relative;margin-bottom:24px}
+          .timeline-dot{position:absolute;left:-39px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+          .timeline-date{color:var(--accent2);font-size:.82em;margin-bottom:4px;font-weight:600}
+          .timeline-card{margin-left:0}
+          .timeline-card .preview{color:var(--text2);font-size:.85em;margin-top:6px}
+        </style>`;
+
+        const body = `${timelineCSS}<h2>📅 Timeline (${filteredPages.length} entries)</h2>${filterForm}${timelineHtml}`;
+        res.end(htmlShell('Timeline', body, '/timeline', sidebarPages));
+
+      } else if (path === '/analytics') {
+        const stats = await brain.stats();
+        const pages = await brain.list({ limit: 500 });
+        const allTags = await tagGraph.getAllTags();
+
+        // Pages by source
+        const bySource = new Map<string, number>();
+        for (const p of pages) {
+          const src = (p.frontmatter as any)?.source ?? 'manual';
+          bySource.set(src, (bySource.get(src) ?? 0) + 1);
+        }
+
+        // Pages by month
+        const byMonth = new Map<string, number>();
+        for (const p of pages) {
+          const d = new Date(p.created_at);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          byMonth.set(key, (byMonth.get(key) ?? 0) + 1);
+        }
+        const sortedMonths = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+        // Growth chart (SVG bar chart)
+        const maxCount = Math.max(...sortedMonths.map(m => m[1]), 1);
+        const barWidth = Math.max(30, Math.min(60, 800 / Math.max(sortedMonths.length, 1)));
+        const chartWidth = Math.max(400, sortedMonths.length * (barWidth + 8) + 60);
+        const chartHeight = 250;
+
+        const bars = sortedMonths.map(([month, count], i) => {
+          const x = 40 + i * (barWidth + 8);
+          const barH = (count / maxCount) * (chartHeight - 60);
+          const y = chartHeight - 30 - barH;
+          return `<rect x="${x}" y="${y}" width="${barWidth}" height="${barH}" fill="#7c3aed" rx="4" opacity="0.85"/>
+                  <text x="${x + barWidth / 2}" y="${chartHeight - 12}" fill="#8b949e" font-size="10" text-anchor="middle">${month.slice(5)}</text>
+                  <text x="${x + barWidth / 2}" y="${y - 5}" fill="#e6edf3" font-size="11" text-anchor="middle">${count}</text>`;
+        }).join('');
+
+        const growthSVG = sortedMonths.length > 0
+          ? `<svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width:100%;height:${chartHeight}px"><rect width="${chartWidth}" height="${chartHeight}" fill="#161b22" rx="10"/>${bars}</svg>`
+          : '<div class="empty">No data</div>';
+
+        // By source cards
+        const sourceCards = [...bySource.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([src, cnt]) => `<div class="stat-card"><div class="num">${cnt}</div><div class="label">${esc(src)}</div></div>`)
+          .join('');
+
+        // Top tags
+        const topTags = allTags.slice(0, 20);
+        const tagMaxCount = Math.max(...topTags.map(t => t.count), 1);
+        const tagBars = topTags.map(t => {
+          const pct = (t.count / tagMaxCount * 100).toFixed(0);
+          return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+            <span style="width:120px;font-size:.82em;text-align:right;color:var(--text2)">${esc(t.tag)}</span>
+            <div style="flex:1;background:var(--bg3);border-radius:4px;height:20px;overflow:hidden">
+              <div style="width:${pct}%;background:var(--accent);height:100%;border-radius:4px"></div>
+            </div>
+            <span style="font-size:.82em;color:var(--text2);width:30px">${t.count}</span>
+          </div>`;
+        }).join('');
+
+        // By type
+        const typeCards = Object.entries(stats.pages_by_type)
+          .sort((a, b) => b[1] - a[1])
+          .map(([type, cnt]) => `<div class="stat-card"><div class="num">${cnt}</div><div class="label">${esc(type)}</div></div>`)
+          .join('');
+
+        const body = `<h2>📈 Brain Analytics</h2>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="num">${stats.page_count}</div><div class="label">Total Pages</div></div>
+            <div class="stat-card"><div class="num">${stats.chunk_count}</div><div class="label">Chunks</div></div>
+            <div class="stat-card"><div class="num">${stats.tag_count}</div><div class="label">Tags</div></div>
+            <div class="stat-card"><div class="num">${stats.link_count}</div><div class="label">Links</div></div>
+          </div>
+
+          <h3 style="margin:24px 0 12px">📈 Growth Over Time</h3>
+          <div class="card">${growthSVG}</div>
+
+          <h3 style="margin:24px 0 12px">📂 By Type</h3>
+          <div class="stats-grid">${typeCards || '<div class="empty">No data</div>'}</div>
+
+          <h3 style="margin:24px 0 12px">📡 By Source</h3>
+          <div class="stats-grid">${sourceCards || '<div class="empty">No data</div>'}</div>
+
+          <h3 style="margin:24px 0 12px">🏷️ Top Tags</h3>
+          <div class="card">${tagBars || '<div class="empty">No tags</div>'}</div>`;
+
+        res.end(htmlShell('Analytics', body, '/analytics', sidebarPages));
+
       } else if (path === '/api/search') {
         res.setHeader('Content-Type', 'application/json');
         const q = query.q ?? '';

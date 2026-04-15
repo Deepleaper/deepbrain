@@ -45,6 +45,9 @@ import { initI18n, t, getLocale } from './i18n.js';
 import { fireWebhook, loadWebhookConfig } from './webhooks.js';
 import { retagAll, loadAutoTagConfig } from './auto-tag.js';
 import { startWebUI } from './web/index.js';
+import { syncNotion } from './sync/notion-sync.js';
+import { watchObsidianVault } from './sync/obsidian-watcher.js';
+import { findConnections, formatConnections } from './connections.js';
 
 // ── Multi-brain helpers ──────────────────────────────────────────
 
@@ -766,6 +769,79 @@ async function main() {
       break;
     }
 
+    case 'sync': {
+      const sub = args[1];
+      if (sub === 'notion') {
+        const tokenResult = extractFlag(args, '--token', '');
+        args = tokenResult.args;
+        const dbResult = extractFlag(args, '--database', '');
+        args = dbResult.args;
+        const prefixResult = extractFlag(args, '--prefix', 'notion/');
+        args = prefixResult.args;
+
+        if (!tokenResult.value || !dbResult.value) {
+          console.error('Usage: deepbrain sync notion --token <token> --database <id> [--prefix notion/]');
+          break;
+        }
+
+        const brain = await getBrain(brainName);
+        const result = await syncNotion(brain, {
+          token: tokenResult.value,
+          databaseId: dbResult.value,
+          prefix: prefixResult.value,
+          onProgress: (msg) => console.log(msg),
+        });
+        console.log(`\n📊 Synced: ${result.synced}, Skipped: ${result.skipped}, Errors: ${result.errors.length}`);
+        if (result.errors.length > 0) {
+          result.errors.forEach(e => console.log(`  ⚠️ ${e.pageId}: ${e.error}`));
+        }
+        await brain.disconnect();
+      } else {
+        console.error('Usage: deepbrain sync notion --token <token> --database <id>');
+      }
+      break;
+    }
+
+    case 'watch': {
+      const vaultPath = args[1];
+      if (!vaultPath) { console.error('Usage: deepbrain watch <vault-path>'); break; }
+
+      const brain = await getBrain(brainName);
+      console.log(`👁️  Watching Obsidian vault: ${resolve(vaultPath)}`);
+      console.log('   Press Ctrl+C to stop.\n');
+
+      const watcher = watchObsidianVault(brain, resolve(vaultPath), {
+        onImport: (file, slug) => console.log(`  ✅ ${file} → ${slug}`),
+        onError: (file, error) => console.log(`  ⚠️ ${file}: ${error}`),
+      });
+
+      // Keep process alive
+      process.on('SIGINT', async () => {
+        console.log(`\n\n📊 Imported ${watcher.importCount} files.`);
+        watcher.stop();
+        await brain.disconnect();
+        process.exit(0);
+      });
+
+      // Prevent exit
+      await new Promise(() => {}); // Wait forever
+      break;
+    }
+
+    case 'related': {
+      const slug = args[1];
+      if (!slug) { console.error('Usage: deepbrain related <slug>'); break; }
+      const brain = await getBrain(brainName);
+      const result = await findConnections(brain, slug);
+      if (result) {
+        console.log(formatConnections(result));
+      } else {
+        console.log(`Page not found: ${slug}`);
+      }
+      await brain.disconnect();
+      break;
+    }
+
     case 'web': {
       const portResult = extractFlag(args, '--port', '3000');
       const hostResult = extractFlag(args, '--host', '0.0.0.0');
@@ -811,6 +887,9 @@ Commands:
   deepbrain merge <brain1> <brain2>      Merge two brains
   deepbrain serve [--port 3333]          Start REST API server
   deepbrain web [--port 3000]            Start interactive Web UI
+  deepbrain sync notion --token T --database D   Sync from Notion database
+  deepbrain watch <vault-path>           Watch Obsidian vault for changes
+  deepbrain related <slug>               Find related pages (smart connections)
   deepbrain retag                        Re-tag all pages with LLM
   deepbrain plugin list|add|remove       Manage plugins
 
