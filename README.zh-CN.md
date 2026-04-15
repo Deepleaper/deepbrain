@@ -379,3 +379,13 @@ deepbrain export --format <格式> --output <目录>  # 导出
 ## 📄 开源协议
 
 MIT © [Magicray1217](https://github.com/Magicray1217)
+
+---
+
+## v0.9.0 新功能
+
+- **Memory Operation DSL** — 8 种操作：STORE/MERGE/PROMOTE/DEMOTE/EXPIRE/LOCK/SPLIT/LINK
+- **Proactive Memory Injection** — 自动查找相关记忆注入上下文
+- **Memory Hierarchy** — Core/Working/Archival 三级记忆自动升降级
+- **Temporal Tracking** — 知识演变时间线追踪
+- **Memory Compression** — 提取式摘要压缩旧记忆

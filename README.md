@@ -679,6 +679,51 @@ deepbrain export --format <格式> --output <目录>  # 导出
 
 ---
 
+### 🆕 v0.9.0 新功能
+
+#### Memory Operation DSL（记忆操作语言）
+```bash
+deepbrain op "STORE content:\"AI is amazing\" type:note tags:ai,tech"
+deepbrain op "MERGE topic:AI topic:ML into:ai-ml"
+deepbrain op "PROMOTE slug:important-fact importance:9"
+deepbrain op "LOCK slug:critical-data"
+deepbrain op "EXPIRE slug:temp-note days:30"
+deepbrain op "SPLIT slug:big-topic into:sub1,sub2"
+deepbrain op "LINK from:topic-a to:topic-b"
+```
+
+支持 8 种操作：STORE / MERGE / PROMOTE / DEMOTE / EXPIRE / LOCK / SPLIT / LINK
+
+#### Proactive Memory Injection（主动记忆注入）
+```bash
+deepbrain inject "I'm preparing for the board meeting"
+```
+自动查找相关记忆，无需被问到就主动提供上下文。混合搜索（语义+关键词+时间），可配置相关性阈值。
+
+#### Memory Hierarchy（记忆层级）
+```bash
+deepbrain tiers stats              # 查看各层统计
+deepbrain tiers cycle              # 运行自动升降级
+deepbrain tiers core               # 查看核心记忆
+deepbrain tiers set <slug> core    # 手动设置层级
+```
+三级记忆：Core（核心）/ Working（工作）/ Archival（归档），自动根据访问频率升降级。
+
+#### Temporal Tracking（时间追踪）
+```bash
+deepbrain temporal <slug>          # 查看知识演变时间线
+```
+追踪事实的学习和变化时间，支持"某日我对 X 了解多少？"查询。
+
+#### Memory Compression（记忆压缩）
+```bash
+deepbrain compress                 # 压缩所有旧记忆
+deepbrain compress <slug>          # 压缩指定记忆
+```
+提取式摘要压缩旧记忆，减少上下文 token 用量，保留原始版本作为归档。
+
+---
+
 ### 📄 开源协议
 
 MIT © [Magicray1217](https://github.com/Magicray1217)
