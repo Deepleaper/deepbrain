@@ -32,6 +32,13 @@ import { injectMemories, formatInjection } from './proactive.js';
 import { getTierStats, runTierCycle, setTier, getCoreContext, type MemoryTier } from './memory-tiers.js';
 import { getKnowledgeEvolution, formatTimeline } from './temporal.js';
 import { runCompression, compressPage } from './compression.js';
+import { buildKnowledgeGraph, queryGraph, formatGraph, formatQueryResult } from './knowledge-graph.js';
+import { generateDigest, formatDigest } from './digest.js';
+import { shareBrain, unshareBrain, listShared, mergeBrains, formatMergeResult, formatSharedList } from './collaboration.js';
+import { startServer } from './server.js';
+import { PluginRegistry, formatPluginList } from './plugins.js';
+import { advancedSearch, formatAdvancedResults } from './search-advanced.js';
+import type { AdvancedSearchOpts } from './search-advanced.js';
 
 // ── Multi-brain helpers ──────────────────────────────────────────
 
@@ -328,19 +335,46 @@ async function main() {
 
     case 'search':
     case 's': {
+      // Check for advanced search flags
+      const tagResult = extractFlag(args, '--tag', '');
+      args = tagResult.args;
+      const afterResult = extractFlag(args, '--after', '');
+      args = afterResult.args;
+      const beforeResult = extractFlag(args, '--before', '');
+      args = beforeResult.args;
+      const tierResult = extractFlag(args, '--tier', '');
+      args = tierResult.args;
+      const fuzzyResult = hasFlag(args, '--fuzzy');
+      args = fuzzyResult.args;
+
       const keyword = args.slice(1).join(' ');
-      if (!keyword) { console.error('Usage: deepbrain search "keyword"'); break; }
+      if (!keyword) { console.error('Usage: deepbrain search "keyword" [--tag X] [--after YYYY-MM-DD] [--fuzzy]'); break; }
 
       const brain = await getBrain(brainName);
-      const results = await brain.search(keyword, { limit: 10 });
 
-      if (results.length === 0) {
-        console.log('No results found.');
+      const isAdvanced = tagResult.value || afterResult.value || beforeResult.value || tierResult.value || fuzzyResult.present;
+
+      if (isAdvanced) {
+        const opts: AdvancedSearchOpts = {
+          limit: 20,
+          tag: tagResult.value || undefined,
+          after: afterResult.value || undefined,
+          before: beforeResult.value || undefined,
+          tier: tierResult.value || undefined,
+          fuzzy: fuzzyResult.present,
+        };
+        const results = await advancedSearch(brain, keyword, opts);
+        console.log(formatAdvancedResults(results, keyword));
       } else {
-        console.log(`\n🔑 ${results.length} results for "${keyword}"\n`);
-        for (const r of results) {
-          console.log(`  📄 ${r.slug} (${r.type}) — score: ${r.score.toFixed(4)}`);
-          console.log(`     ${r.chunk_text.slice(0, 120)}...\n`);
+        const results = await brain.search(keyword, { limit: 10 });
+        if (results.length === 0) {
+          console.log('No results found.');
+        } else {
+          console.log(`\n🔑 ${results.length} results for "${keyword}"\n`);
+          for (const r of results) {
+            console.log(`  📄 ${r.slug} (${r.type}) — score: ${r.score.toFixed(4)}`);
+            console.log(`     ${r.chunk_text.slice(0, 120)}...\n`);
+          }
         }
       }
       await brain.disconnect();
@@ -566,6 +600,145 @@ async function main() {
       break;
     }
 
+    // ── v1.0.0 Commands ──────────────────────────────────────────
+
+    case 'graph': {
+      const sub = args[1];
+      const brain = await getBrain(brainName);
+      const config = loadConfig(brainName);
+      const llmConfig = { provider: config.llm_provider ?? config.embedding_provider, model: config.llm_model, apiKey: config.api_key };
+
+      if (sub === 'query') {
+        const entity = args.slice(2).join(' ');
+        if (!entity) { console.error('Usage: deepbrain graph query "entity"'); break; }
+        const result = await queryGraph(brain, entity, llmConfig);
+        if (result) {
+          console.log(formatQueryResult(result));
+        } else {
+          console.log(`Entity not found: ${entity}`);
+        }
+      } else {
+        const graph = await buildKnowledgeGraph(brain, llmConfig);
+        console.log(formatGraph(graph));
+      }
+      await brain.disconnect();
+      break;
+    }
+
+    case 'digest': {
+      const periodResult = extractFlag(args, '--period', 'weekly');
+      const period = periodResult.value as 'daily' | 'weekly' | 'monthly';
+      const brain = await getBrain(brainName);
+      const config = loadConfig(brainName);
+
+      const digest = await generateDigest(brain, {
+        period,
+        provider: config.llm_provider ?? config.embedding_provider,
+        model: config.llm_model,
+        apiKey: config.api_key,
+      });
+      console.log(formatDigest(digest));
+      await brain.disconnect();
+      break;
+    }
+
+    case 'share': {
+      const target = args[1];
+      const userResult = extractFlag(args, '--with', '');
+      const permResult = extractFlag(args.slice(0), '--permission', 'read');
+
+      if (!target || !userResult.value) {
+        console.error('Usage: deepbrain share <brain> --with <user> [--permission read|write|admin]');
+        break;
+      }
+
+      const brainDir = getBrainDir(target);
+      const manifest = shareBrain(brainDir, userResult.value, permResult.value as any);
+      console.log(formatSharedList(manifest));
+      break;
+    }
+
+    case 'unshare': {
+      const target = args[1];
+      const user = args[2];
+      if (!target || !user) {
+        console.error('Usage: deepbrain unshare <brain> <user>');
+        break;
+      }
+      const brainDir = getBrainDir(target);
+      const manifest = unshareBrain(brainDir, user);
+      console.log(`✅ Revoked access for ${user}`);
+      console.log(formatSharedList(manifest));
+      break;
+    }
+
+    case 'merge': {
+      const brain1Name = args[1];
+      const brain2Name = args[2];
+      if (!brain1Name || !brain2Name) {
+        console.error('Usage: deepbrain merge <source-brain> <target-brain> [--overwrite]');
+        break;
+      }
+      const overwriteResult = hasFlag(args, '--overwrite');
+      const dryRunResult = hasFlag(args, '--dry-run');
+
+      const source = await getBrain(brain1Name);
+      const target = await getBrain(brain2Name);
+      const result = await mergeBrains(source, target, {
+        overwrite: overwriteResult.present,
+        dryRun: dryRunResult.present,
+      });
+      console.log(formatMergeResult(result));
+      if (dryRunResult.present) console.log('\n   (dry run — no changes made)');
+      await source.disconnect();
+      await target.disconnect();
+      break;
+    }
+
+    case 'serve':
+    case 'server': {
+      const portResult = extractFlag(args, '--port', '3333');
+      const hostResult = extractFlag(args, '--host', '127.0.0.1');
+      const config = loadConfig(brainName);
+
+      await startServer({
+        port: parseInt(portResult.value),
+        host: hostResult.value,
+        brainConfig: config,
+        llmConfig: { provider: config.llm_provider ?? config.embedding_provider, model: config.llm_model, apiKey: config.api_key },
+      });
+      break;
+    }
+
+    case 'plugin': {
+      const sub = args[1];
+      const pluginsDir = join(getBrainDir(brainName), 'plugins');
+      const registry = new PluginRegistry(pluginsDir);
+
+      if (sub === 'list') {
+        console.log(formatPluginList(registry.list()));
+      } else if (sub === 'add') {
+        const name = args[2];
+        const typeResult = extractFlag(args, '--type', 'importer');
+        if (!name) { console.error('Usage: deepbrain plugin add <name> --type <type>'); break; }
+        const template = PluginRegistry.createTemplate(name, typeResult.value as any);
+        registry.add(name, template.manifest, template.code);
+        console.log(`✅ Plugin "${name}" created at ${pluginsDir}/${name}/`);
+        console.log(`   Edit ${pluginsDir}/${name}/${template.manifest.entry} to implement.`);
+      } else if (sub === 'remove') {
+        const name = args[2];
+        if (!name) { console.error('Usage: deepbrain plugin remove <name>'); break; }
+        if (registry.remove(name)) {
+          console.log(`✅ Plugin "${name}" removed.`);
+        } else {
+          console.log(`Plugin not found: ${name}`);
+        }
+      } else {
+        console.error('Usage: deepbrain plugin [list|add|remove]');
+      }
+      break;
+    }
+
     default:
       console.log(`
 🧠 DeepBrain — Personal AI Brain
@@ -588,6 +761,13 @@ Commands:
   deepbrain tiers [stats|cycle|core]     Memory tier management
   deepbrain temporal <slug>              Knowledge evolution timeline
   deepbrain compress [slug]              Compress old memories
+  deepbrain graph                        Knowledge graph visualization
+  deepbrain graph query "AI"             Query entity relationships
+  deepbrain digest --period weekly       Smart knowledge digest
+  deepbrain share <brain> --with <user>  Share a brain
+  deepbrain merge <brain1> <brain2>      Merge two brains
+  deepbrain serve [--port 3333]          Start REST API server
+  deepbrain plugin list|add|remove       Manage plugins
 
 Flags:
   --brain <name>                         Use a named brain (default: "default")

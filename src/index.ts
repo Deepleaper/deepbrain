@@ -57,3 +57,27 @@ export type { TemporalMetadata, TemporalSnapshot, KnowledgeEvolution } from './t
 // Memory Compression
 export { compressText, compressPage, runCompression, getFullVersion } from './compression.js';
 export type { CompressionConfig, CompressionResult } from './compression.js';
+
+// Knowledge Graph
+export { extractEntities, buildKnowledgeGraph, queryGraph, formatGraph, formatQueryResult } from './knowledge-graph.js';
+export type { Entity, Relationship, KnowledgeGraph, EntityCluster, GraphQueryResult } from './knowledge-graph.js';
+
+// Smart Digest
+export { generateDigest, formatDigest } from './digest.js';
+export type { DigestConfig, Digest, DigestEntry, DigestConnection } from './digest.js';
+
+// Collaborative Brains
+export { shareBrain, unshareBrain, listShared, hasPermission, mergeBrains, formatMergeResult, formatSharedList } from './collaboration.js';
+export type { Permission, SharedUser, BrainManifest, MergeResult } from './collaboration.js';
+
+// API Server
+export { startServer } from './server.js';
+export type { ServerConfig } from './server.js';
+
+// Plugin System
+export { PluginRegistry, formatPluginList } from './plugins.js';
+export type { PluginManifest, PluginInstance, PluginType, ImporterPlugin, ExporterPlugin, SearchPlugin, PostProcessorPlugin } from './plugins.js';
+
+// Advanced Search
+export { advancedSearch, formatAdvancedResults } from './search-advanced.js';
+export type { AdvancedSearchOpts, SearchSuggestion, FacetedResults } from './search-advanced.js';
