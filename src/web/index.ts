@@ -166,6 +166,7 @@ const htmlShell = (title: string, body: string, activePath: string, sidebarPages
       <a class="nav-item${activePath === '/timeline' ? ' active' : ''}" href="/timeline">📅 Timeline</a>
       <a class="nav-item${activePath === '/analytics' ? ' active' : ''}" href="/analytics">📈 Analytics</a>
       <a class="nav-item${activePath === '/stats' ? ' active' : ''}" href="/stats">📊 ${t('web.stats')}</a>
+      <a class="nav-item${activePath === '/flashcards' ? ' active' : ''}" href="/flashcards">🎴 Flashcards</a>
     </div>
     <div class="sidebar-section">
       <h3>${t('web.pages')} <span class="page-count">${sidebarPages ? sidebarPages.split('page-item').length - 1 : 0}</span></h3>
@@ -211,6 +212,15 @@ function parseQuery(url: string): Record<string, string> {
     if (k) params[decodeURIComponent(k)] = decodeURIComponent(v ?? '');
   });
   return params;
+}
+
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (c: Buffer) => chunks.push(c));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString()));
+    req.on('error', reject);
+  });
 }
 
 // ── Knowledge Graph SVG Generator ────────────────────────────────
@@ -591,6 +601,92 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
           <div class="card">${tagBars || '<div class="empty">No tags</div>'}</div>`;
 
         res.end(htmlShell('Analytics', body, '/analytics', sidebarPages));
+
+      } else if (path === '/flashcards') {
+        // Flashcard review UI
+        const body = `<h2>🎴 Flashcards</h2>
+          <div id="fc-app" style="max-width:600px;margin:0 auto">
+            <div id="fc-stats" class="stats-grid" style="margin-bottom:20px"></div>
+            <div id="fc-card" class="card" style="min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:transform .3s;perspective:1000px">
+              <div id="fc-front" style="font-size:1.2em;text-align:center;padding:20px"></div>
+              <div id="fc-back" style="display:none;font-size:1em;text-align:center;padding:20px;color:var(--accent2)"></div>
+              <div id="fc-empty" style="color:var(--text2)">Loading flashcards...</div>
+            </div>
+            <div id="fc-buttons" style="display:none;margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+              <button onclick="rateCard(0)" style="background:var(--error);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">😵 Again (0)</button>
+              <button onclick="rateCard(2)" style="background:var(--warn);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">😕 Hard (2)</button>
+              <button onclick="rateCard(3)" style="background:var(--success);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">👍 Good (3)</button>
+              <button onclick="rateCard(5)" style="background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer">🌟 Easy (5)</button>
+            </div>
+            <div style="margin-top:16px;text-align:center">
+              <span id="fc-progress" style="color:var(--text2);font-size:.85em"></span>
+            </div>
+          </div>
+          <script>
+          let cards=[], idx=0, flipped=false;
+          async function loadCards(){
+            const r=await fetch('/api/flashcards/due');
+            const d=await r.json();
+            cards=d.cards||[];
+            document.getElementById('fc-progress').textContent=cards.length+' cards due';
+            if(cards.length===0){
+              document.getElementById('fc-empty').textContent='🎉 No cards due! Come back later.';
+              document.getElementById('fc-buttons').style.display='none';
+            } else { showCard(); }
+            const sr=await fetch('/api/flashcards/stats');
+            const st=await sr.json();
+            document.getElementById('fc-stats').innerHTML=
+              '<div class="stat-card"><div class="num">'+st.total+'</div><div class="label">Total</div></div>'+
+              '<div class="stat-card"><div class="num">'+st.dueToday+'</div><div class="label">Due</div></div>'+
+              '<div class="stat-card"><div class="num">'+st.mastered+'</div><div class="label">Mastered</div></div>'+
+              '<div class="stat-card"><div class="num">'+st.learning+'</div><div class="label">Learning</div></div>';
+          }
+          function showCard(){
+            if(idx>=cards.length){document.getElementById('fc-front').textContent='✅ All done!';document.getElementById('fc-back').style.display='none';document.getElementById('fc-buttons').style.display='none';return;}
+            const c=cards[idx];
+            document.getElementById('fc-front').textContent='❓ '+c.question;
+            document.getElementById('fc-back').textContent='💡 '+c.answer;
+            document.getElementById('fc-back').style.display='none';
+            document.getElementById('fc-empty').style.display='none';
+            document.getElementById('fc-buttons').style.display='none';
+            flipped=false;
+          }
+          document.getElementById('fc-card').addEventListener('click',()=>{
+            if(!flipped&&idx<cards.length){
+              document.getElementById('fc-back').style.display='block';
+              document.getElementById('fc-buttons').style.display='flex';
+              flipped=true;
+            }
+          });
+          async function rateCard(grade){
+            const c=cards[idx];
+            await fetch('/api/flashcards/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.id,grade})});
+            idx++;
+            document.getElementById('fc-progress').textContent=(cards.length-idx)+' cards remaining';
+            showCard();
+          }
+          loadCards();
+          </script>`;
+        res.end(htmlShell('Flashcards', body, '/flashcards', sidebarPages));
+
+      } else if (path === '/api/flashcards/due') {
+        res.setHeader('Content-Type', 'application/json');
+        const { getDueCards: gdc } = await import('../flashcards.js');
+        const dataDir = config.brainConfig?.data_dir ?? './brain';
+        res.end(JSON.stringify({ cards: gdc(dataDir) }));
+      } else if (path === '/api/flashcards/stats') {
+        res.setHeader('Content-Type', 'application/json');
+        const { getFlashcardStats: gfs } = await import('../flashcards.js');
+        const dataDir = config.brainConfig?.data_dir ?? './brain';
+        res.end(JSON.stringify(gfs(dataDir)));
+      } else if (path === '/api/flashcards/review' && req.method === 'POST') {
+        res.setHeader('Content-Type', 'application/json');
+        const body2 = await readBody(req);
+        const { id, grade } = JSON.parse(body2);
+        const { reviewCard: rc } = await import('../flashcards.js');
+        const dataDir = config.brainConfig?.data_dir ?? './brain';
+        const updated = rc(dataDir, id, grade);
+        res.end(JSON.stringify({ ok: !!updated, card: updated }));
 
       } else if (path === '/api/search') {
         res.setHeader('Content-Type', 'application/json');

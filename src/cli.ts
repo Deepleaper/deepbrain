@@ -26,7 +26,9 @@ import { homedir } from 'node:os';
 import { Brain } from './core/brain.js';
 import type { DeepBrainConfig } from './core/types.js';
 import { dream } from './dream/index.js';
-import { chatWithBrain } from './commands/chat.js';
+import { chatWithBrain, chatWithBrains } from './commands/chat.js';
+import { generateFlashcards, getDueCards, reviewCard, getFlashcardStats, sm2, type ReviewGrade } from './flashcards.js';
+import { generateDigestEmail, type DigestEmailConfig } from './digest-email.js';
 import { createChat } from 'agentkits';
 import type { ChatMessage } from 'agentkits';
 import { parseOp, executeOp } from './operations.js';
@@ -400,20 +402,35 @@ async function main() {
       args = providerResult.args;
       const modelResult = extractFlag(args, '--model', '');
       args = modelResult.args;
+      const brainsResult = extractFlag(args, '--brains', '');
+      args = brainsResult.args;
 
       const question = args.slice(1).join(' ');
-      if (!question) { console.error('Usage: deepbrain chat "your question" [--provider deepseek] [--model ...]'); break; }
+      if (!question) { console.error('Usage: deepbrain chat "your question" [--brains personal,work,research] [--provider deepseek] [--model ...]'); break; }
 
-      const brain = await getBrain(brainName);
       const config = loadConfig(brainName);
-
-      await chatWithBrain(brain, question, {
+      const chatOpts = {
         provider: providerResult.value || config.llm_provider || config.embedding_provider,
         model: modelResult.value || config.llm_model || undefined,
         apiKey: config.api_key,
-      });
+      };
 
-      await brain.disconnect();
+      if (brainsResult.value) {
+        // Multi-brain chat
+        const brainNames = brainsResult.value.split(',').map(s => s.trim());
+        const brains: Array<{ brain: Brain; name: string }> = [];
+        for (const name of brainNames) {
+          brains.push({ brain: await getBrain(name), name });
+        }
+        console.log(`🧠 Chatting across ${brains.length} brains: ${brainNames.join(', ')}`);
+        await chatWithBrains(brains, question, chatOpts);
+        for (const { brain } of brains) await brain.disconnect();
+      } else {
+        // Single brain chat
+        const brain = await getBrain(brainName);
+        await chatWithBrain(brain, question, chatOpts);
+        await brain.disconnect();
+      }
       break;
     }
 
@@ -842,6 +859,88 @@ async function main() {
       break;
     }
 
+    case 'flashcards': {
+      const sub = args[1];
+      const config = loadConfig(brainName);
+      const brain = await getBrain(brainName);
+      const dataDir = config.data_dir ?? './brain';
+
+      if (sub === 'generate') {
+        const slugs = args.slice(2).filter(s => !s.startsWith('--'));
+        console.log('\n🎴 Generating flashcards...\n');
+        const newCards = await generateFlashcards(brain, dataDir, {
+          provider: config.llm_provider || config.embedding_provider,
+          model: config.llm_model,
+          apiKey: config.api_key,
+          slugs: slugs.length > 0 ? slugs : undefined,
+        });
+        console.log(`\n✅ Generated ${newCards.length} new flashcards`);
+      } else if (sub === 'review') {
+        const due = getDueCards(dataDir);
+        if (due.length === 0) {
+          console.log('\n🎉 No cards due for review! Come back later.\n');
+        } else {
+          console.log(`\n🎴 ${due.length} cards due for review\n`);
+          // In CLI, just show cards. Interactive review needs readline or web UI.
+          for (const card of due.slice(0, 10)) {
+            console.log(`  ❓ ${card.question}`);
+            console.log(`  💡 ${card.answer}`);
+            console.log(`     (slug: ${card.slug}, ease: ${card.easiness.toFixed(2)}, interval: ${card.interval}d)\n`);
+          }
+          if (due.length > 10) console.log(`  ... and ${due.length - 10} more. Use the Web UI for interactive review.\n`);
+        }
+      } else if (sub === 'stats') {
+        const stats = getFlashcardStats(dataDir);
+        console.log(`\n🎴 Flashcard Stats`);
+        console.log(`   Total: ${stats.total}`);
+        console.log(`   Due today: ${stats.dueToday}`);
+        console.log(`   Mastered: ${stats.mastered}`);
+        console.log(`   Learning: ${stats.learning}`);
+        console.log(`   New: ${stats.newCards}`);
+        console.log(`   Avg Easiness: ${stats.avgEasiness.toFixed(2)}\n`);
+      } else {
+        console.log('Usage: deepbrain flashcards <generate|review|stats> [slugs...]');
+      }
+      await brain.disconnect();
+      break;
+    }
+
+    case 'digest-email': {
+      const toResult = extractFlag(args, '--to', '');
+      args = toResult.args;
+      const periodResult = extractFlag(args, '--period', 'daily');
+      args = periodResult.args;
+      const webhookResult = extractFlag(args, '--webhook', '');
+      args = webhookResult.args;
+
+      const config = loadConfig(brainName);
+      const brain = await getBrain(brainName);
+
+      const emailConfig: DigestEmailConfig = {
+        period: periodResult.value === 'weekly' ? 'weekly' : 'daily',
+        to: toResult.value,
+        provider: config.llm_provider || config.embedding_provider,
+        model: config.llm_model,
+        apiKey: config.api_key,
+        webhookUrl: webhookResult.value || undefined,
+        smtp: (config as any).smtp,
+      };
+
+      console.log(`\n📧 Generating ${emailConfig.period} digest email...\n`);
+      const result = await generateDigestEmail(brain, emailConfig);
+      console.log(`   Pages: ${result.pages.length}`);
+      console.log(`   Delivered: ${result.delivered} (${result.method})`);
+      if (result.pages.length > 0) {
+        console.log('   Recent pages:');
+        for (const p of result.pages.slice(0, 5)) {
+          console.log(`     📄 ${p.title} (${p.updated_at.toISOString().split('T')[0]})`);
+        }
+      }
+      console.log('');
+      await brain.disconnect();
+      break;
+    }
+
     case 'web': {
       const portResult = extractFlag(args, '--port', '3000');
       const hostResult = extractFlag(args, '--host', '0.0.0.0');
@@ -869,6 +968,11 @@ Commands:
   deepbrain query "text"                 Semantic search (hybrid)
   deepbrain search "keyword"             Keyword search
   deepbrain chat "question"              Chat with your brain (RAG)
+  deepbrain chat "q" --brains a,b,c      Chat across multiple brains
+  deepbrain flashcards generate [slugs]  Generate Q&A flashcards from pages
+  deepbrain flashcards review            Review due flashcards (SM-2)
+  deepbrain flashcards stats             Flashcard statistics
+  deepbrain digest-email --to email      Send learning digest email
   deepbrain link <from> <to>             Create a link between pages
   deepbrain timeline <slug> "text"       Add timeline entry
   deepbrain stats                        Brain statistics

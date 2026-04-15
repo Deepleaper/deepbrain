@@ -93,3 +93,15 @@ export type { WebhookEvent, WebhookConfig, WebhookPayload } from './webhooks.js'
 // Auto-Tagging
 export { generateTags, autoTagPage, retagAll, loadAutoTagConfig } from './auto-tag.js';
 export type { AutoTagConfig, AutoTagResult } from './auto-tag.js';
+
+// Flashcards (v1.3)
+export { generateFlashcards, getDueCards, reviewCard, getFlashcardStats, sm2, loadDeck, saveDeck } from './flashcards.js';
+export type { Flashcard, FlashcardDeck, FlashcardStats, ReviewGrade, GenerateOpts } from './flashcards.js';
+
+// Digest Email (v1.3)
+export { generateDigestEmail } from './digest-email.js';
+export type { DigestEmailConfig, DigestResult } from './digest-email.js';
+
+// Multi-Brain Chat (v1.3)
+export { chatWithBrain, chatWithBrains } from './commands/chat.js';
+export type { ChatOptions, MultiBrainChatOptions } from './commands/chat.js';
