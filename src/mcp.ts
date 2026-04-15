@@ -199,7 +199,7 @@ async function main() {
   await brain.connect();
 
   const server = new Server(
-    { name: 'deepbrain', version: '0.2.0' },
+    { name: 'deepbrain', version: '1.4.0' },
     { capabilities: { tools: {} } },
   );
 

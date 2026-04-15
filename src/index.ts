@@ -105,3 +105,15 @@ export type { DigestEmailConfig, DigestResult } from './digest-email.js';
 // Multi-Brain Chat (v1.3)
 export { chatWithBrain, chatWithBrains } from './commands/chat.js';
 export type { ChatOptions, MultiBrainChatOptions } from './commands/chat.js';
+
+// Backup & Restore (v1.4)
+export { backupBrain, restoreBrain } from './backup.js';
+export type { BackupManifest, BackupResult, RestoreResult } from './backup.js';
+
+// Brain Templates (v1.4)
+export { applyTemplate, listTemplates, TEMPLATES } from './templates.js';
+export type { BrainTemplate } from './templates.js';
+
+// API Client SDK (v1.4)
+export { DeepBrainClient } from './sdk.js';
+export type { DeepBrainClientConfig, SDKPage, SDKSearchResult, SDKChatResponse, SDKStats } from './sdk.js';

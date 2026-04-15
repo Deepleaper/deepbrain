@@ -50,6 +50,8 @@ import { startWebUI } from './web/index.js';
 import { syncNotion } from './sync/notion-sync.js';
 import { watchObsidianVault } from './sync/obsidian-watcher.js';
 import { findConnections, formatConnections } from './connections.js';
+import { backupBrain, restoreBrain } from './backup.js';
+import { applyTemplate, listTemplates, TEMPLATES } from './templates.js';
 
 // ── Multi-brain helpers ──────────────────────────────────────────
 
@@ -181,6 +183,8 @@ async function main() {
 
   switch (command) {
     case 'init': {
+      const templateResult = extractFlag(args, '--template', '');
+      args = templateResult.args;
       const provider = args[1] ?? 'ollama';
       const brainDir = getBrainDir(brainName);
       const dataDir = join(brainDir, 'brain');
@@ -219,6 +223,21 @@ async function main() {
       console.log(`   Provider: ${provider}`);
       console.log(`   Config: ${configFile}`);
       console.log(`   Data: ${dbDir}`);
+
+      // Apply template if specified
+      if (templateResult.value) {
+        try {
+          const brain = await getBrain(brainName);
+          const result = await applyTemplate(brain, templateResult.value);
+          console.log(`\n📋 Template "${templateResult.value}" applied!`);
+          console.log(`   Pages: ${result.pages}, Links: ${result.links}, Tags: ${result.tags}`);
+          await brain.disconnect();
+        } catch (e: any) {
+          console.error(`\n⚠️  Template error: ${e.message}`);
+          console.log(`   Available templates: ${Object.keys(TEMPLATES).join(', ')}`);
+        }
+      }
+
       console.log(`\n   Try: deepbrain put my-first-note notes.md`);
       break;
     }
@@ -957,12 +976,98 @@ async function main() {
       break;
     }
 
+    // ── v1.4.0 Commands ──────────────────────────────────────────
+
+    case 'backup': {
+      const outputResult = extractFlag(args, '--output', '');
+      args = outputResult.args;
+      const brain = await getBrain(brainName);
+      console.log('\n📦 Creating backup...\n');
+      const result = await backupBrain(brain, outputResult.value || undefined);
+      console.log(`✅ Backup created: ${result.file}`);
+      console.log(`   Pages: ${result.manifest.page_count}`);
+      console.log(`   Links: ${result.manifest.link_count}`);
+      console.log(`   Tags: ${result.manifest.tag_count}`);
+      console.log(`   Timeline entries: ${result.manifest.timeline_count}\n`);
+      await brain.disconnect();
+      break;
+    }
+
+    case 'restore': {
+      const file = args[1];
+      if (!file) { console.error('Usage: deepbrain restore <file.zip>'); break; }
+      const brain = await getBrain(brainName);
+      console.log(`\n📦 Restoring from ${file}...\n`);
+      const result = await restoreBrain(brain, file);
+      console.log(`✅ Restore complete`);
+      console.log(`   Pages: ${result.pages_restored}`);
+      console.log(`   Links: ${result.links_restored}`);
+      console.log(`   Tags: ${result.tags_restored}`);
+      console.log(`   Timeline: ${result.timeline_restored}`);
+      if (result.errors.length > 0) {
+        console.log(`   Errors: ${result.errors.length}`);
+        result.errors.slice(0, 5).forEach(e => console.log(`     ⚠️ ${e}`));
+      }
+      console.log('');
+      await brain.disconnect();
+      break;
+    }
+
+    case 'templates': {
+      console.log('\n📋 Available Brain Templates:\n');
+      for (const t of listTemplates()) {
+        console.log(`  ${t.name.padEnd(15)} ${t.description}`);
+      }
+      console.log(`\n  Usage: deepbrain init --template <name> [provider]\n`);
+      break;
+    }
+
+    case 'mcp': {
+      // Start MCP server (delegates to mcp.ts via import)
+      console.error('🧠 Starting DeepBrain MCP Server...');
+      const { main: mcpMain } = await import('./mcp.js') as any;
+      // mcp.ts runs main() at top level, so just importing it starts it
+      // But since we're in the CLI, we need to handle it differently
+      // The MCP server is meant to be run directly: deepbrain-mcp or node dist/mcp.js
+      console.error('ℹ️  MCP server runs via: deepbrain-mcp (or node dist/mcp.js)');
+      console.error('   Configure in Claude Desktop / Cursor as:');
+      console.error('   { "command": "deepbrain-mcp", "args": [] }');
+      break;
+    }
+
+    case 'batch-import': {
+      const dir = args[1];
+      if (!dir) { console.error('Usage: deepbrain batch-import <directory> [--type note]'); break; }
+      const typeResult = extractFlag(args, '--type', 'note');
+
+      const brain = await getBrain(brainName);
+      const { readdirSync, readFileSync, statSync } = await import('node:fs');
+      const { join, basename } = await import('node:path');
+
+      const files = readdirSync(dir).filter(f => f.endsWith('.md') || f.endsWith('.txt'));
+      if (files.length === 0) { console.error('No .md or .txt files found'); break; }
+
+      console.log(`\n📥 Batch importing ${files.length} files...\n`);
+
+      const inputs = files.map(f => {
+        const content = readFileSync(join(dir, f), 'utf8');
+        const slug = basename(f).replace(/\.(md|txt)$/, '').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-');
+        return { slug, input: { type: typeResult.value, title: basename(f).replace(/\.\w+$/, ''), compiled_truth: content } };
+      });
+
+      const pages = await brain.putBatch(inputs);
+      console.log(`✅ Imported ${pages.length} pages (batch embedded)\n`);
+      await brain.disconnect();
+      break;
+    }
+
     default:
       console.log(`
 🧠 DeepBrain — Personal AI Brain
 
 Commands:
   deepbrain init [provider]              Initialize (default: ollama)
+  deepbrain init --template research     Initialize with template
   deepbrain put <slug> [file]            Add/update a page (auto-summarizes)
   deepbrain get <slug>                   Read a page
   deepbrain query "text"                 Semantic search (hybrid)
@@ -995,6 +1100,11 @@ Commands:
   deepbrain watch <vault-path>           Watch Obsidian vault for changes
   deepbrain related <slug>               Find related pages (smart connections)
   deepbrain retag                        Re-tag all pages with LLM
+  deepbrain backup [--output file.zip]   Export brain to backup
+  deepbrain restore <file.zip>           Restore brain from backup
+  deepbrain templates                    List available brain templates
+  deepbrain batch-import <dir>           Batch import .md files (fast)
+  deepbrain mcp                          MCP server info
   deepbrain plugin list|add|remove       Manage plugins
 
 Flags:
