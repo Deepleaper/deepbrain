@@ -81,3 +81,15 @@ export type { PluginManifest, PluginInstance, PluginType, ImporterPlugin, Export
 // Advanced Search
 export { advancedSearch, formatAdvancedResults } from './search-advanced.js';
 export type { AdvancedSearchOpts, SearchSuggestion, FacetedResults } from './search-advanced.js';
+
+// i18n
+export { initI18n, setLocale, getLocale, detectLocale, t } from './i18n.js';
+export type { Locale } from './i18n.js';
+
+// Webhooks
+export { fireWebhook, loadWebhookConfig, defaultWebhookConfig } from './webhooks.js';
+export type { WebhookEvent, WebhookConfig, WebhookPayload } from './webhooks.js';
+
+// Auto-Tagging
+export { generateTags, autoTagPage, retagAll, loadAutoTagConfig } from './auto-tag.js';
+export type { AutoTagConfig, AutoTagResult } from './auto-tag.js';

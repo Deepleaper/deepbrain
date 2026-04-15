@@ -16,6 +16,8 @@
  *   deepbrain dream                    Run Dream Cycle
  *   deepbrain list [--type X]          List pages
  *   deepbrain list-brains              List all brains
+ *   deepbrain retag                    Re-tag all pages with LLM
+ *   deepbrain web [--port 3000]        Start interactive Web UI
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
@@ -39,6 +41,10 @@ import { startServer } from './server.js';
 import { PluginRegistry, formatPluginList } from './plugins.js';
 import { advancedSearch, formatAdvancedResults } from './search-advanced.js';
 import type { AdvancedSearchOpts } from './search-advanced.js';
+import { initI18n, t, getLocale } from './i18n.js';
+import { fireWebhook, loadWebhookConfig } from './webhooks.js';
+import { retagAll, loadAutoTagConfig } from './auto-tag.js';
+import { startWebUI } from './web/index.js';
 
 // ── Multi-brain helpers ──────────────────────────────────────────
 
@@ -155,6 +161,11 @@ const ENV_KEYS: Record<string, string> = {
 
 async function main() {
   let args = process.argv.slice(2);
+
+  // Initialize i18n
+  const langResult = extractFlag(args, '--lang', '');
+  args = langResult.args;
+  initI18n(langResult.value as any || undefined);
 
   // Extract --brain flag (applies to all commands)
   const brainResult = extractFlag(args, '--brain', 'default');
@@ -739,6 +750,38 @@ async function main() {
       break;
     }
 
+    case 'retag': {
+      const brain = await getBrain(brainName);
+      const config = loadConfig(brainName);
+      const tagConfig = loadAutoTagConfig(config as Record<string, unknown>);
+      tagConfig.enabled = true; // Force enable for retag command
+
+      console.log(t('retag.start'));
+      const results = await retagAll(brain, tagConfig, (slug, tags) => {
+        console.log(t('retag.page', { slug, tags: tags.join(', ') }));
+      });
+      const tagged = results.filter(r => !r.skipped).length;
+      console.log(t('retag.done', { count: String(tagged) }));
+      await brain.disconnect();
+      break;
+    }
+
+    case 'web': {
+      const portResult = extractFlag(args, '--port', '3000');
+      const hostResult = extractFlag(args, '--host', '0.0.0.0');
+      const config = loadConfig(brainName);
+      const webhookConfig = loadWebhookConfig(config as Record<string, unknown>);
+
+      await startWebUI({
+        port: parseInt(portResult.value),
+        host: hostResult.value,
+        brainConfig: config,
+        locale: getLocale() as any,
+        webhookConfig,
+      });
+      break;
+    }
+
     default:
       console.log(`
 🧠 DeepBrain — Personal AI Brain
@@ -767,6 +810,8 @@ Commands:
   deepbrain share <brain> --with <user>  Share a brain
   deepbrain merge <brain1> <brain2>      Merge two brains
   deepbrain serve [--port 3333]          Start REST API server
+  deepbrain web [--port 3000]            Start interactive Web UI
+  deepbrain retag                        Re-tag all pages with LLM
   deepbrain plugin list|add|remove       Manage plugins
 
 Flags:
@@ -774,6 +819,7 @@ Flags:
   --no-summary                           Skip auto-summary on put
   --provider <provider>                  LLM provider for chat
   --model <model>                        LLM model for chat
+  --lang <en|zh>                         Language (auto-detected)
 
 Providers: ${AVAILABLE_PROVIDERS.join(', ')}
 Docs: https://github.com/Magicray1217/deepbrain
