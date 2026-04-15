@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.1] - 2026-04-16
+
+### Changed
+- 🇨🇳 **中文优先** — README.md 改为中英双语（中文在前）
+- 📖 **README.zh-CN.md** — 全新独立中文文档，面向普通用户
+- 🌐 **默认中文** — 系统语言检测默认中文（`DEEPBRAIN_LANG` 环境变量可覆盖）
+- 🔌 **Chrome 扩展** — 弹窗和说明全面中文化
+- 🏷️ **i18n 扩展** — 新增 50+ 中文翻译键（初始化、闪卡、备份、导入、图谱等）
+- 📦 **npm 描述** — 双语描述「你的个人 AI 知识大脑」
+
 ## [0.6.0] - 2026-04-13
 
 ### Added

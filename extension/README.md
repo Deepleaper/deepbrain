@@ -1,56 +1,56 @@
-# DeepBrain Chrome Extension
+# DeepBrain Chrome 扩展 — 网页剪藏
 
-Save web pages and highlighted text to your DeepBrain knowledge base with one click.
+一键保存网页和选中文字到你的 DeepBrain 知识大脑。
 
-## Features
+## 功能
 
-- **Quick Save**: Click the extension icon to save the current page
-- **Context Menu**: Highlight text → right-click → "Save to DeepBrain"
-- **Auto-fill**: Title, slug, and content are auto-populated from the page
-- **Configurable**: Set your DeepBrain API URL and brain name
+- **快速保存**：点击扩展图标保存当前网页
+- **右键菜单**：选中文字 → 右键 → "保存到 DeepBrain"
+- **自动填充**：标题、标识、内容自动从网页获取
+- **可配置**：自定义 DeepBrain API 地址和大脑名称
 
-## Install (Developer Mode)
+## 安装步骤
 
-1. Start the DeepBrain API server:
+1. 启动 DeepBrain API 服务：
    ```bash
    deepbrain serve --port 3333
    ```
 
-2. Open Chrome and navigate to `chrome://extensions/`
+2. 打开 Chrome，访问 `chrome://extensions/`
 
-3. Enable **Developer mode** (toggle in top-right)
+3. 开启右上角的 **开发者模式**
 
-4. Click **Load unpacked** and select the `extension/` directory
+4. 点击 **加载已解压的扩展程序**，选择 `extension/` 目录
 
-5. The 🧠 icon appears in your toolbar — you're ready!
+5. 工具栏出现 🧠 图标——安装完成！
 
-## Usage
+## 使用方法
 
-### Quick Save (Popup)
-1. Click the 🧠 icon in the toolbar
-2. Adjust slug, title, type, or content if needed
-3. Click **Save to Brain**
+### 快速保存（弹窗）
+1. 点击工具栏的 🧠 图标
+2. 根据需要调整标识、标题、类型或内容
+3. 点击 **保存到大脑**
 
-### Context Menu (Right-Click)
-1. Highlight any text on a web page
-2. Right-click → **🧠 Save to DeepBrain**
-3. The selected text is saved as a bookmark with the page URL
+### 右键菜单
+1. 在网页上选中任意文字
+2. 右键 → **🧠 保存到 DeepBrain**
+3. 选中的文字会作为书签保存，附带页面 URL
 
-### Settings
-Click the ⚙️ Settings section in the popup to configure:
-- **API URL**: Default `http://localhost:3333` (your DeepBrain serve endpoint)
-- **Brain name**: Which brain to save to (default: `default`)
+### 设置
+点击弹窗中的 ⚙️ 设置 可以配置：
+- **API 地址**：默认 `http://localhost:3333`（DeepBrain serve 端口）
+- **大脑名称**：保存到哪个大脑（默认：`default`）
 
-## Requirements
+## 要求
 
-- DeepBrain server running (`deepbrain serve`)
-- Chrome/Chromium-based browser (Edge, Brave, Arc, etc.)
+- DeepBrain 服务运行中（`deepbrain serve`）
+- Chrome / Chromium 内核浏览器（Edge、Brave、Arc 等均可）
 
-## Icon Placeholders
+## 图标
 
-Place your icons in `extension/icons/`:
-- `icon16.png` (16×16)
-- `icon48.png` (48×48)
-- `icon128.png` (128×128)
+在 `extension/icons/` 目录放置图标文件：
+- `icon16.png`（16×16）
+- `icon48.png`（48×48）
+- `icon128.png`（128×128）
 
-Or the extension will work without custom icons.
+没有自定义图标扩展也能正常工作。

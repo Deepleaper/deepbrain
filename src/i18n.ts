@@ -64,18 +64,79 @@ const messages: Record<string, Record<Locale, string>> = {
   'web.metadata': { en: 'Metadata', zh: '元数据' },
   'web.backlinks': { en: 'Backlinks', zh: '反向链接' },
   'web.relatedPages': { en: 'Related Pages', zh: '相关页面' },
+  'web.flashcards': { en: 'Flashcards', zh: '闪卡' },
+  'web.playground': { en: 'Playground', zh: '体验场' },
+  'web.chat': { en: 'Chat', zh: '对话' },
+  'web.save': { en: 'Save', zh: '保存' },
+  'web.delete': { en: 'Delete', zh: '删除' },
+  'web.edit': { en: 'Edit', zh: '编辑' },
+  'web.cancel': { en: 'Cancel', zh: '取消' },
+  'web.confirm': { en: 'Confirm', zh: '确认' },
+  'web.loading': { en: 'Loading...', zh: '加载中...' },
+  'web.noResults': { en: 'No results', zh: '无结果' },
+
+  // Init messages
+  'init.detected': { en: '🔍 Auto-detected API key from {key}', zh: '🔍 自动检测到 API 密钥：{key}' },
+  'init.success': { en: '🧠 DeepBrain initialized!', zh: '🧠 DeepBrain 已初始化！' },
+  'init.brain': { en: '   Brain:    {name}', zh: '   大脑：    {name}' },
+  'init.provider': { en: '   Provider: {provider}', zh: '   提供商：  {provider}' },
+  'init.config': { en: '   Config:   {path}', zh: '   配置：    {path}' },
+  'init.data': { en: '   Data:     {path}', zh: '   数据：    {path}' },
+  'init.template.applied': { en: '📋 Template "{name}" applied!', zh: '📋 模板 "{name}" 已应用！' },
+  'init.template.notFound': { en: '⚠️ Template "{name}" not found.', zh: '⚠️ 模板 "{name}" 未找到。' },
+  'init.checklist': { en: '📋 Getting Started Checklist:', zh: '📋 快速入门清单：' },
+  'init.checklist.addNote': { en: '   ◻ Add your first note:   deepbrain put my-note notes.md', zh: '   ◻ 添加第一条笔记：deepbrain put 我的笔记 notes.md' },
+  'init.checklist.search': { en: '   ◻ Search your brain:      deepbrain query "something"', zh: '   ◻ 搜索大脑：      deepbrain query "搜点什么"' },
+  'init.checklist.chat': { en: '   ◻ Chat with your brain:   deepbrain chat "question"', zh: '   ◻ 与大脑对话：    deepbrain chat "你的问题"' },
+  'init.checklist.playground': { en: '   ◻ Try the playground:     deepbrain playground', zh: '   ◻ 试试体验模式：  deepbrain playground' },
+  'init.checklist.doctor': { en: '   ◻ Check health:           deepbrain doctor', zh: '   ◻ 健康检查：      deepbrain doctor' },
+  'init.providers': { en: '📋 Available providers & pricing:', zh: '📋 可用的 AI 提供商及价格：' },
+
+  // Doctor messages
+  'doctor.title': { en: '🩺 DeepBrain Doctor', zh: '🩺 DeepBrain 健康检查' },
+  'doctor.pass': { en: '✅ {item}: OK', zh: '✅ {item}：正常' },
+  'doctor.fail': { en: '❌ {item}: FAILED', zh: '❌ {item}：异常' },
+  'doctor.warn': { en: '⚠️ {item}: WARNING', zh: '⚠️ {item}：警告' },
+
+  // Flashcard messages
+  'flashcards.generate': { en: '📇 Generating flashcards...', zh: '📇 正在生成闪卡...' },
+  'flashcards.generated': { en: '✅ Generated {count} flashcards', zh: '✅ 已生成 {count} 张闪卡' },
+  'flashcards.review.start': { en: '📇 Starting review ({count} cards due)', zh: '📇 开始复习（{count} 张待复习）' },
+  'flashcards.review.done': { en: '✅ Review complete!', zh: '✅ 复习完成！' },
+  'flashcards.noDue': { en: '🎉 No cards due for review!', zh: '🎉 没有待复习的闪卡！' },
+
+  // Backup messages
+  'backup.start': { en: '💾 Backing up brain...', zh: '💾 正在备份大脑...' },
+  'backup.done': { en: '✅ Backup saved to {path}', zh: '✅ 备份已保存到 {path}' },
+  'restore.start': { en: '📂 Restoring brain...', zh: '📂 正在恢复大脑...' },
+  'restore.done': { en: '✅ Brain restored!', zh: '✅ 大脑已恢复！' },
+
+  // Import messages
+  'import.start': { en: '📥 Importing from {source}...', zh: '📥 正在从 {source} 导入...' },
+  'import.done': { en: '✅ Imported {count} pages from {source}', zh: '✅ 从 {source} 导入了 {count} 个页面' },
+  'import.progress': { en: '  [{current}/{total}] {name}', zh: '  [{current}/{total}] {name}' },
+
+  // Share messages
+  'share.start': { en: '🌐 Sharing brain on port {port}...', zh: '🌐 大脑分享服务启动在端口 {port}...' },
+  'share.export': { en: '📦 Exporting static site to {path}...', zh: '📦 正在导出静态站点到 {path}...' },
+
+  // Graph messages
+  'graph.building': { en: '🕸️ Building knowledge graph...', zh: '🕸️ 正在构建知识图谱...' },
+  'graph.done': { en: '✅ Knowledge graph built: {entities} entities, {relations} relations', zh: '✅ 知识图谱已构建：{entities} 个实体，{relations} 个关系' },
 };
 
 let currentLocale: Locale = 'en';
 
-/** Detect locale from env / system */
+/** Detect locale from env / system. Defaults to Chinese (primary audience). */
 export function detectLocale(): Locale {
-  const lang = process.env.LANG ?? process.env.LANGUAGE ?? process.env.LC_ALL ?? '';
+  const lang = process.env.DEEPBRAIN_LANG ?? process.env.LANG ?? process.env.LANGUAGE ?? process.env.LC_ALL ?? '';
+  if (lang.startsWith('en')) return 'en';
   if (lang.startsWith('zh')) return 'zh';
-  // Check if running on a Chinese system
+  // Check system locale
   const locale = Intl.DateTimeFormat().resolvedOptions().locale ?? '';
-  if (locale.startsWith('zh')) return 'zh';
-  return 'en';
+  if (locale.startsWith('en')) return 'en';
+  // Default to Chinese — DeepBrain 面向中文用户
+  return 'zh';
 }
 
 /** Set the current locale */

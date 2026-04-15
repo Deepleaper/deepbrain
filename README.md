@@ -2,9 +2,9 @@
 
 # 🧠 DeepBrain
 
-**Your Personal AI Knowledge Brain**
+**你的个人 AI 知识大脑 | Your Personal AI Knowledge Brain**
 
-Store, search, connect, and grow your knowledge — powered by embeddings, local-first.
+存储、搜索、关联、生长你的全部知识 —— 本地优先，AI 驱动。
 
 [![npm version](https://img.shields.io/npm/v/deepbrain?color=blue)](https://www.npmjs.com/package/deepbrain)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
@@ -12,219 +12,200 @@ Store, search, connect, and grow your knowledge — powered by embeddings, local
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://typescriptlang.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-[Quick Start](#-quick-start) · [Features](#-features) · [Import](#-import-everything) · [CLI Reference](#-cli-reference) · [MCP](#-mcp-server) · [Architecture](#-architecture)
+[中文文档](README.zh-CN.md) | [快速开始](#-快速开始) · [功能特性](#-功能特性) · [导入数据](#-导入一切) · [CLI 命令](#-cli-命令参考) · [MCP 集成](#-mcp-server) · [竞品对比](#-竞品对比)
 
 </div>
 
 ---
 
-## ⚡ Quick Start (30 seconds)
+## 为什么需要 DeepBrain？
 
-```bash
-# Install
-npm install -g deepbrain
+你的知识散落在各处——Notion、Obsidian、Evernote、Flomo、飞书、语雀、微信、PDF……
 
-# Initialize with your preferred AI provider
-deepbrain init gemini          # or: openai, deepseek, ollama, dashscope, zhipu, moonshot
+当你想找某个东西时，你得先想起来**放在哪了**。
 
-# Add your first knowledge
-deepbrain put meeting-notes notes.md      # Auto-summarizes & auto-tags!
-echo "React 19 uses a compiler" | deepbrain put react-19
+**DeepBrain** 把所有知识汇集到一个本地大脑，用 AI 理解语义，让你用自然语言搜索**全部知识**。
 
-# Search semantically
-deepbrain query "what did we discuss about the product roadmap?"
-
-# Chat with your brain (RAG)
-deepbrain chat "summarize our key decisions this week"
-```
-
-That's it. Your brain is running locally with PGLite + pgvector. No external database needed.
+- 🔍 **语义搜索** — 不用记关键词，用你的话问就行
+- 🧩 **知识图谱** — 自动发现知识之间的关联
+- 📇 **闪卡复习** — SM-2 间隔重复算法，把知识刻进记忆
+- 📥 **导入一切** — 21 个平台一键导入，8 个中文平台原生支持
+- 🏠 **本地优先** — 数据 100% 在你手里，无需云服务
+- 🤖 **MCP 集成** — 让 Claude、Cursor 等 AI 助手直接读取你的知识
 
 ---
 
-## 🚀 Features
-
-### Core Brain
-| Feature | Description |
-|---------|-------------|
-| **Hybrid Search** | Semantic (vector) + keyword search with automatic ranking |
-| **Auto-Summary** | Every page auto-summarized and auto-tagged by LLM |
-| **Dream Cycle** | Background maintenance: refresh stale content, fix broken links |
-| **Knowledge Graph** | Auto-extract entities and relationships, query connections |
-| **Memory Tiers** | Core → Working → Archival, automatic promotion/demotion |
-| **Flashcards** | SM-2 spaced repetition generated from your knowledge |
-| **Multi-Brain** | Separate brains for work, personal, research — or merge them |
-| **Templates** | Pre-built brain structures: research, CRM, journal, PKM |
-
-### 🆕 v1.5.0 — Import Everything
-
-| Source | Command |
-|--------|---------|
-| **GitHub Repos** | `deepbrain import github --repo owner/repo` |
-| **GitHub Stars** | `deepbrain import github-stars --user username` |
-| **YouTube** | `deepbrain import youtube <url>` (transcript + LLM summary) |
-| **RSS Feeds** | `deepbrain sync rss --add <url>` then `--run` |
-| **Notion** | `deepbrain sync notion --token T --database D` |
-| **Obsidian** | `deepbrain watch <vault-path>` (live sync) |
-| Evernote | `deepbrain batch-import <export-dir>` |
-| Roam, Logseq, Bear | Via import module |
-| 语雀, 飞书, 石墨 | 中文平台全支持 |
-| Flomo, FlowUs, 思源 | Via import module |
-| Apple Notes, Google Keep, OneNote | Via import module |
-| EPUB / PDF | `deepbrain import ebook <file>` |
-| **20+ platforms total** | See [full list](#-import-sources) |
-
-### 🆕 v1.5.0 — Share & Collaborate
+## ⚡ 快速开始
 
 ```bash
-# Serve your brain as a read-only website
+# 安装
+npm install -g deepbrain
+
+# 初始化（选你喜欢的 AI 提供商）
+deepbrain init gemini          # Google Gemini（推荐，有免费额度）
+deepbrain init deepseek        # DeepSeek
+deepbrain init dashscope       # 阿里通义千问
+deepbrain init ollama          # 本地 Ollama（零费用）
+
+# 写入知识
+deepbrain put 会议记录 notes.md          # 自动摘要 + 自动打标签
+echo "React 19 引入了编译器" | deepbrain put react-19
+
+# 语义搜索
+deepbrain query "产品路线图讨论了什么？"
+
+# 与大脑对话（RAG）
+deepbrain chat "总结一下本周的关键决策"
+```
+
+就这么简单。大脑使用 PGLite + pgvector 在本地运行，无需外部数据库。
+
+---
+
+## 🚀 功能特性
+
+### 核心能力
+
+| 功能 | 说明 |
+|------|------|
+| **混合搜索** | 语义（向量）+ 关键词搜索，自动排序融合 |
+| **自动摘要** | 每个页面由 LLM 自动生成摘要和标签 |
+| **知识图谱** | 自动提取实体和关系，查询知识关联 |
+| **梦境循环** | 后台自动维护：刷新过期内容、修复断链 |
+| **记忆分层** | 核心 → 工作 → 归档，自动升降级 |
+| **闪卡复习** | SM-2 间隔重复算法，从知识库自动生成 |
+| **多大脑** | 工作、个人、研究分开管理，或合并查询 |
+| **模板系统** | 预设大脑结构：研究、CRM、日记、PKM |
+
+### 导入一切
+
+| 数据源 | 命令 |
+|--------|------|
+| **Obsidian** | `deepbrain import obsidian ./vault` |
+| **Notion** | `deepbrain sync notion --token T --database D` |
+| **语雀** | `deepbrain import yuque` |
+| **飞书** | `deepbrain import feishu` |
+| **微信公众号** | `deepbrain import wechat` |
+| **Flomo** | `deepbrain import flomo` |
+| **石墨** | `deepbrain import shimo` |
+| **思源笔记** | `deepbrain import siyuan` |
+| **GitHub** | `deepbrain import github --repo owner/repo` |
+| **YouTube** | `deepbrain import youtube <url>` |
+| **RSS** | `deepbrain sync rss --add <url>` |
+| **EPUB/PDF** | `deepbrain import ebook <file>` |
+| 还有 Evernote、Roam、Logseq、Bear、Day One 等 | **共 21 个平台** |
+
+### 分享与协作
+
+```bash
+# 作为只读网站分享大脑
 deepbrain share --port 8080
 
-# Export as static HTML site (deploy anywhere)
+# 导出为静态 HTML（部署到任意服务器）
 deepbrain share --export ./public
 
-# Subscribe to RSS feeds for auto-import
+# RSS 自动订阅导入
 deepbrain sync rss --add https://blog.example.com/feed.xml
 deepbrain sync rss --run
 ```
 
-### 🆕 v1.6.0 — Playground, Enhanced Chat & Doctor
+---
+
+## 🌐 Web 界面
 
 ```bash
-# 🧪 Interactive Playground — try DeepBrain without any setup!
-deepbrain playground              # launches web UI with /playground route
-# Pre-loaded sample knowledge base, live search & chat demo
+deepbrain web --port 3000
+```
 
-# 💬 Enhanced Chat — multi-turn with memory
-deepbrain chat -i                 # interactive multi-turn conversation
-deepbrain chat -i --session <id>  # resume a previous session
-# Commands in chat: /save (bookmark), /context (show sources), /sessions, /quit
-# Better RAG: more chunks, re-ranking, inline citations [1][2]
+交互式 Web 界面，支持搜索、页面编辑、知识图谱可视化、闪卡复习。默认中文界面。
 
-# 🩺 Health Check
-deepbrain doctor                  # checks config, API key, DB, embedding model
+### Playground 体验
 
-# 🎯 Improved Init
-deepbrain init gemini             # now shows pricing, auto-detects env keys,
-                                  # and displays Getting Started checklist
+```bash
+deepbrain playground    # 无需配置，预置示例知识库
 ```
 
 ---
 
-## 📥 Import Sources
+## 🔌 Chrome 扩展 — 网页剪藏
 
-DeepBrain imports from **20+ platforms** — the most comprehensive knowledge importer available:
-
-<details>
-<summary><b>International Platforms</b></summary>
-
-- **Notion** — Live sync via API
-- **Obsidian** — Live file watcher
-- **Evernote** — ENEX export
-- **Roam Research** — JSON export
-- **Logseq** — Markdown directory
-- **Bear** — SQLite database
-- **Apple Notes** — macOS database
-- **Google Keep** — Takeout export
-- **OneNote** — HTML export
-- **Joplin** — Raw data
-- **Readwise** — CSV/JSON export
-- **Day One** — JSON export
-- **GitHub** — Repos, docs, wikis, starred repos
-- **YouTube** — Video transcripts with LLM summary
-- **RSS** — Any RSS/Atom feed
-
-</details>
-
-<details>
-<summary><b>中文平台</b></summary>
-
-- **语雀 (Yuque)** — API 导入
-- **飞书 (Feishu)** — 文档导入
-- **石墨 (Shimo)** — 导出文件
-- **微信 (WeChat)** — 聊天记录
-- **Flomo** — 导出数据
-- **FlowUs (息流)** — 导出数据
-- **思源笔记 (SiYuan)** — 数据目录
-- **Wolai (我来)** — 导出数据
-
-</details>
+一键保存网页到大脑。安装说明见 [extension/README.md](extension/README.md)。
 
 ---
 
-## 📖 CLI Reference
+## 📖 CLI 命令参考
 
-### Basic Operations
+### 基础操作
 
 ```bash
-deepbrain put <slug> [file]          # Add/update page (auto-summarizes)
-deepbrain get <slug>                 # Read a page
-deepbrain query "text"               # Semantic search
-deepbrain search "keyword"           # Keyword search (supports --tag, --after, --fuzzy)
-deepbrain chat "question"            # RAG chat with your brain
-deepbrain list [--type X]            # List pages
-deepbrain stats                      # Brain statistics
+deepbrain put <slug> [file]          # 添加/更新页面（自动摘要）
+deepbrain get <slug>                 # 读取页面
+deepbrain query "文本"               # 语义搜索
+deepbrain search "关键词"            # 关键词搜索（支持 --tag, --after, --fuzzy）
+deepbrain chat "问题"                # RAG 对话
+deepbrain list [--type X]            # 列出页面
+deepbrain stats                      # 大脑统计
 ```
 
-### Import & Sync
+### 导入与同步
 
 ```bash
-deepbrain import github --repo owner/repo    # Import repo README, docs/, wiki
-deepbrain import github-stars --user name     # Import starred repos
-deepbrain import youtube <url>               # Import video transcript + summary
-deepbrain sync rss --add <feed-url>          # Subscribe to RSS
-deepbrain sync rss --run                     # Fetch all feeds
-deepbrain sync notion --token T --database D # Sync Notion database
-deepbrain watch <vault-path>                 # Watch Obsidian vault
-deepbrain batch-import <directory>           # Bulk import .md/.txt files
+deepbrain import github --repo owner/repo    # 导入 GitHub 仓库
+deepbrain import github-stars --user name     # 导入 GitHub Star
+deepbrain import youtube <url>               # 导入视频字幕 + 摘要
+deepbrain sync rss --add <feed-url>          # 订阅 RSS
+deepbrain sync rss --run                     # 抓取所有订阅
+deepbrain sync notion --token T --database D # 同步 Notion
+deepbrain watch <vault-path>                 # 监听 Obsidian 仓库
+deepbrain batch-import <directory>           # 批量导入 .md/.txt
 ```
 
-### Knowledge Management
+### 知识管理
 
 ```bash
-deepbrain dream                      # Run maintenance cycle
-deepbrain graph                      # Build knowledge graph
-deepbrain graph query "entity"       # Query entity relationships
-deepbrain related <slug>             # Find related pages
-deepbrain link <from> <to>           # Manual link
-deepbrain timeline <slug> "text"     # Add timeline entry
-deepbrain tiers stats                # Memory tier breakdown
-deepbrain compress [slug]            # Compress old memories
-deepbrain retag                      # Re-tag all pages with LLM
+deepbrain dream                      # 运行维护循环
+deepbrain graph                      # 构建知识图谱
+deepbrain graph query "实体"          # 查询实体关系
+deepbrain related <slug>             # 查找相关页面
+deepbrain link <from> <to>           # 手动链接
+deepbrain timeline <slug> "文本"     # 添加时间线
+deepbrain tiers stats                # 记忆分层统计
+deepbrain compress [slug]            # 压缩旧记忆
+deepbrain retag                      # LLM 重新打标签
 ```
 
-### Learning & Sharing
+### 学习与分享
 
 ```bash
-deepbrain flashcards generate        # Generate flashcards from knowledge
-deepbrain flashcards review          # SM-2 spaced repetition review
-deepbrain digest --period weekly     # Knowledge digest
-deepbrain share --port 8080          # Serve read-only web UI
-deepbrain share --export ./site      # Export as static site
+deepbrain flashcards generate        # 从知识生成闪卡
+deepbrain flashcards review          # SM-2 间隔重复复习
+deepbrain digest --period weekly     # 知识周报
+deepbrain share --port 8080          # 只读 Web 分享
+deepbrain share --export ./site      # 导出静态站点
 ```
 
-### Multi-Brain
+### 多大脑管理
 
 ```bash
-deepbrain init --brain work openai   # Create named brain
-deepbrain --brain work put ...       # Use specific brain
-deepbrain chat "q" --brains a,b,c   # Cross-brain chat
-deepbrain merge source target        # Merge brains
-deepbrain list-brains                # Show all brains
+deepbrain init --brain work openai   # 创建命名大脑
+deepbrain --brain work put ...       # 使用指定大脑
+deepbrain chat "q" --brains a,b,c   # 跨大脑查询
+deepbrain merge source target        # 合并大脑
+deepbrain list-brains                # 查看所有大脑
 ```
 
-### Backup & Restore
+### 备份与恢复
 
 ```bash
-deepbrain backup --output brain.zip  # Full backup
-deepbrain restore brain.zip          # Restore from backup
+deepbrain backup --output brain.zip  # 完整备份
+deepbrain restore brain.zip          # 从备份恢复
 ```
 
 ---
 
 ## 🔌 MCP Server
 
-DeepBrain works as an MCP (Model Context Protocol) tool server for Claude Desktop, Cursor, and other MCP clients:
+DeepBrain 可作为 MCP（Model Context Protocol）工具服务器，接入 Claude Desktop、Cursor 等 AI 助手：
 
 ```json
 {
@@ -237,63 +218,48 @@ DeepBrain works as an MCP (Model Context Protocol) tool server for Claude Deskto
 }
 ```
 
-This gives AI assistants direct access to your knowledge brain.
+提供 12 个工具：`put` · `get` · `query` · `search` · `link` · `unlink` · `get-links` · `timeline-add` · `get-timeline` · `list` · `stats` · `dream`
 
 ---
 
-## 🏗 Architecture
+## 🥊 竞品对比
+
+| 功能 | DeepBrain | Obsidian | Notion | Mem.ai | 腾讯 IMA |
+|------|-----------|----------|--------|--------|---------|
+| **本地优先** | ✅ PGLite | ✅ 文件 | ❌ 云端 | ❌ 云端 | ❌ 云端 |
+| **语义搜索** | ✅ 混合搜索 | ❌ 关键词 | ❌ 关键词 | ✅ | ❌ |
+| **自动摘要** | ✅ LLM | ❌ | ❌ AI 插件 | ✅ | ✅ |
+| **知识图谱** | ✅ 自动 | 🟡 手动 | ❌ | ❌ | ❌ |
+| **导入平台** | ✅ 21 个 | 🟡 插件 | 🟡 有限 | ❌ | 仅微信 |
+| **中文平台** | ✅ 8 个 | ❌ | ❌ | ❌ | 1 个 |
+| **MCP 集成** | ✅ 12 工具 | ❌ | ❌ | ❌ | ❌ |
+| **闪卡（SM-2）** | ✅ 内置 | 🟡 插件 | ❌ | ❌ | ❌ |
+| **CLI 优先** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **开源免费** | ✅ Apache-2.0 | 🟡 Freemium | 🟡 Freemium | ❌ 付费 | ❌ |
+| **数据所有权** | ✅ 100% 你的 | ✅ | ❌ | ❌ | ❌ |
+| **AI 提供商** | ✅ 7 个可选 | 仅 OpenAI | 仅 OpenAI | 仅自有 | 仅混元 |
+
+---
+
+## 🏗 架构
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    DeepBrain CLI / SDK                     │
 ├──────────┬───────────┬──────────┬─────────┬──────────────┤
-│  Import  │  Search   │  Dream   │  Graph  │   Collab     │
-│ 20+ src  │ Hybrid    │  Cycle   │  Auto   │  Share/RSS   │
+│  导入    │  搜索     │  梦境    │  图谱   │   协作       │
+│ 21 平台  │ 混合搜索  │  循环    │  自动   │  分享/RSS    │
 ├──────────┴───────────┴──────────┴─────────┴──────────────┤
-│                    Core Brain Engine                       │
-│          Pages · Chunks · Links · Timeline · Tags          │
+│                    核心大脑引擎                            │
+│       页面 · 分块 · 链接 · 时间线 · 标签 · 闪卡           │
 ├──────────────────────────────────────────────────────────┤
-│  PGLite + pgvector (embedded)  │  agentkits (embeddings)  │
-│  Zero-config local database    │  7 AI providers supported │
+│  PGLite + pgvector（嵌入式）  │  agentkits（多提供商 AI） │
+│  零配置本地数据库             │  7 个 AI 提供商            │
 └──────────────────────────────────────────────────────────┘
 
-Supported Providers:
-  ollama · openai · gemini · deepseek · dashscope · zhipu · moonshot
+支持的 AI 提供商：
+  ollama · openai · gemini · deepseek · dashscope（通义千问）· zhipu（智谱）· moonshot
 ```
-
----
-
-## 🥊 Comparison
-
-| Feature | DeepBrain | Obsidian | Notion | Mem.ai |
-|---------|-----------|----------|--------|--------|
-| **Local-first** | ✅ PGLite | ✅ Files | ❌ Cloud | ❌ Cloud |
-| **Semantic search** | ✅ Hybrid | ❌ Keyword | ❌ Keyword | ✅ |
-| **Auto-summary** | ✅ LLM | ❌ | ❌ AI add-on | ✅ |
-| **Knowledge graph** | ✅ Auto | 🟡 Manual | ❌ | ❌ |
-| **20+ importers** | ✅ | 🟡 Plugins | 🟡 Limited | ❌ |
-| **MCP server** | ✅ | ❌ | ❌ | ❌ |
-| **Flashcards (SM-2)** | ✅ Built-in | 🟡 Plugin | ❌ | ❌ |
-| **RSS sync** | ✅ | 🟡 Plugin | ❌ | ❌ |
-| **GitHub import** | ✅ | ❌ | ❌ | ❌ |
-| **YouTube import** | ✅ | ❌ | ❌ | ❌ |
-| **Multi-brain** | ✅ | 🟡 Vaults | ❌ | ❌ |
-| **Share as website** | ✅ | 🟡 Publish | ✅ | ❌ |
-| **CLI-first** | ✅ | ❌ | ❌ | ❌ |
-| **Free & open** | ✅ Apache-2.0 | 🟡 Freemium | 🟡 Freemium | ❌ Paid |
-| **中文支持** | ✅ Native | 🟡 | 🟡 | ❌ |
-
-**DeepBrain is for developers and power users who want full control over their knowledge.**
-
----
-
-## 🌐 Web UI
-
-```bash
-deepbrain web --port 3000
-```
-
-Interactive web interface with search, page editing, knowledge graph visualization, and flashcard review.
 
 ---
 
@@ -305,25 +271,25 @@ import { Brain } from 'deepbrain';
 const brain = new Brain({ embedding_provider: 'gemini', api_key: '...' });
 await brain.connect();
 
-// Store knowledge
-await brain.put('meeting-q1', {
+// 存储知识
+await brain.put('会议-Q1', {
   type: 'note',
-  title: 'Q1 Planning Meeting',
-  compiled_truth: 'We decided to focus on...',
+  title: 'Q1 规划会议',
+  compiled_truth: '我们决定聚焦于...',
 });
 
-// Semantic search
-const results = await brain.query('product roadmap decisions');
+// 语义搜索
+const results = await brain.query('产品路线图决策');
 
-// Knowledge graph
+// 知识图谱
 import { buildKnowledgeGraph } from 'deepbrain/tag-graph';
 ```
 
 ---
 
-## 🤝 Contributing
+## 🤝 参与贡献
 
-PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+欢迎 PR！请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ```bash
 git clone https://github.com/Magicray1217/deepbrain
@@ -335,16 +301,53 @@ npm test
 
 ---
 
-## 📄 License
+## 📄 开源协议
 
 Apache-2.0 © [Magicray1217](https://github.com/Magicray1217)
+
+由 [跃盟科技 Deepleaper](https://www.deepleaper.com) 出品
 
 ---
 
 <div align="center">
 
-**🧠 Your knowledge deserves a brain, not just a folder.**
+**🧠 你的知识值得拥有一个大脑，而不只是一个文件夹。**
 
-[Get Started →](https://www.npmjs.com/package/deepbrain)
+[立即开始 →](https://www.npmjs.com/package/deepbrain)
 
 </div>
+
+---
+
+<details>
+<summary><b>English Version</b></summary>
+
+## What is DeepBrain?
+
+Your knowledge is scattered — Notion, Obsidian, Evernote, Flomo, Feishu, Yuque, WeChat, PDFs…
+
+**DeepBrain** unifies everything into one local AI brain. Search all your knowledge with natural language.
+
+## Quick Start
+
+```bash
+npm install -g deepbrain
+deepbrain init gemini
+deepbrain put meeting-notes notes.md
+deepbrain query "what did we discuss about the product roadmap?"
+deepbrain chat "summarize our key decisions this week"
+```
+
+## Features
+
+- **Hybrid Search** — Semantic + keyword with automatic ranking
+- **Knowledge Graph** — Auto-extract entities and relationships
+- **Flashcards** — SM-2 spaced repetition from your knowledge
+- **21 Importers** — Notion, Obsidian, Evernote, 8 Chinese platforms, GitHub, YouTube, RSS…
+- **Local-first** — PGLite + pgvector, no external database
+- **MCP Server** — Connect Claude Desktop, Cursor, and other AI assistants
+- **7 AI Providers** — ollama, openai, gemini, deepseek, dashscope, zhipu, moonshot
+
+See the Chinese sections above for full CLI reference, architecture, and comparison table.
+
+</details>

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{width:360px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3}
+body{width:360px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#0d1117;color:#e6edf3}
 .header{padding:16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #30363d}
 .header h1{font-size:16px;font-weight:600}
 .header h1 span{color:#a78bfa}
@@ -27,45 +27,45 @@ body{width:360px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-se
 <body>
 <div class="header">
   <span style="font-size:24px">🧠</span>
-  <h1>Deep<span>Brain</span> Clipper</h1>
+  <h1>Deep<span>Brain</span> 剪藏</h1>
 </div>
 <div class="content">
   <div class="field">
-    <label>Slug (page name)</label>
-    <input type="text" id="slug" placeholder="e.g. article-ai-trends">
+    <label>页面标识（slug）</label>
+    <input type="text" id="slug" placeholder="例如：ai-趋势文章">
   </div>
   <div class="field">
-    <label>Title</label>
+    <label>标题</label>
     <input type="text" id="title">
   </div>
   <div class="field">
-    <label>Type</label>
+    <label>类型</label>
     <select id="type">
-      <option value="note">Note</option>
-      <option value="article">Article</option>
-      <option value="bookmark">Bookmark</option>
-      <option value="reference">Reference</option>
+      <option value="note">笔记</option>
+      <option value="article">文章</option>
+      <option value="bookmark">书签</option>
+      <option value="reference">参考资料</option>
     </select>
   </div>
   <div class="field">
-    <label>Content (auto-filled from page)</label>
-    <textarea id="content" placeholder="Page content or selected text..."></textarea>
+    <label>内容（自动从网页获取）</label>
+    <textarea id="content" placeholder="网页内容或选中的文字..."></textarea>
   </div>
-  <button class="btn" id="saveBtn">💾 Save to Brain</button>
+  <button class="btn" id="saveBtn">💾 保存到大脑</button>
   <div class="status" id="status"></div>
 </div>
 <details class="settings">
-  <summary>⚙️ Settings</summary>
+  <summary>⚙️ 设置</summary>
   <div style="padding:8px 0">
     <div class="field">
-      <label>DeepBrain API URL</label>
+      <label>DeepBrain API 地址</label>
       <input type="text" id="apiUrl" placeholder="http://localhost:3333">
     </div>
     <div class="field">
-      <label>Brain name</label>
+      <label>大脑名称</label>
       <input type="text" id="brain" placeholder="default">
     </div>
-    <button class="btn" id="saveSettings" style="background:#30363d;font-size:12px;padding:6px">Save Settings</button>
+    <button class="btn" id="saveSettings" style="background:#30363d;font-size:12px;padding:6px">保存设置</button>
   </div>
 </details>
 <script src="popup.js"></script>
