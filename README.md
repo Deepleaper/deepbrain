@@ -3,6 +3,8 @@
 > Your personal AI knowledge brain. Import everything, find anything.
 >
 > 你的个人 AI 知识大脑。导入一切，找到一切。
+>
+> **[📖 中文文档 / Chinese Documentation](README.zh-CN.md)**
 
 [![npm](https://img.shields.io/npm/v/deepbrain)](https://www.npmjs.com/package/deepbrain)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
