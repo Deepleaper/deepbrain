@@ -16,6 +16,7 @@ import type { DeepBrainConfig } from '../core/types.js';
 import { t, getLocale, setLocale, type Locale } from '../i18n.js';
 import { fireWebhook, loadWebhookConfig, type WebhookConfig } from '../webhooks.js';
 import { findConnections } from '../connections.js';
+import { getPlaygroundHTML } from './playground.js';
 
 export interface WebUIConfig {
   port?: number;
@@ -167,6 +168,7 @@ const htmlShell = (title: string, body: string, activePath: string, sidebarPages
       <a class="nav-item${activePath === '/analytics' ? ' active' : ''}" href="/analytics">📈 Analytics</a>
       <a class="nav-item${activePath === '/stats' ? ' active' : ''}" href="/stats">📊 ${t('web.stats')}</a>
       <a class="nav-item${activePath === '/flashcards' ? ' active' : ''}" href="/flashcards">🎴 Flashcards</a>
+      <a class="nav-item${activePath === '/playground' ? ' active' : ''}" href="/playground">🧪 Playground</a>
     </div>
     <div class="sidebar-section">
       <h3>${t('web.pages')} <span class="page-count">${sidebarPages ? sidebarPages.split('page-item').length - 1 : 0}</span></h3>
@@ -316,6 +318,10 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
 
       if (path === '/' || path === '/pages') {
         const pages = await brain.list();
+        const ctaBanner = `<div style="background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(59,130,246,0.1));border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div><strong style="color:var(--accent2)">🧪 Try DeepBrain without setup!</strong><br><span style="color:var(--text2);font-size:.88em">Explore semantic search & AI chat with our interactive playground</span></div>
+          <a href="/playground" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:10px 24px;border-radius:8px;font-weight:600;text-decoration:none;font-size:.9em;white-space:nowrap">Try it now →</a>
+        </div>`;
         const list = pages.length === 0
           ? `<div class="empty"><div class="icon">📚</div><p>${t('web.noPages')}</p></div>`
           : pages.map(p => {
@@ -324,7 +330,7 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
               <div class="meta"><span class="tag">${esc(p.type)}</span> · ${t('web.updated')}: ${p.updated_at}</div></div>`;
             }).join('');
 
-        res.end(htmlShell(t('web.pages'), `<h2>📚 ${t('web.allPages')} (${pages.length})</h2>${list}`, '/', sidebarPages));
+        res.end(htmlShell(t('web.pages'), `<h2>📚 ${t('web.allPages')} (${pages.length})</h2>${ctaBanner}${list}`, '/', sidebarPages));
 
       } else if (path.startsWith('/page/')) {
         const slug = decodeURIComponent(path.slice(6));
@@ -713,6 +719,8 @@ export async function startWebUI(config: WebUIConfig = {}): Promise<void> {
           } catch { /* skip */ }
         }
         res.end(JSON.stringify({ nodes, links }));
+      } else if (path === '/playground') {
+        res.end(getPlaygroundHTML());
       } else {
         res.statusCode = 404;
         res.end(htmlShell('404', '<div class="empty"><div class="icon">🔍</div><p>Page not found</p></div>', '', sidebarPages));

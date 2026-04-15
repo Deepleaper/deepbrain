@@ -88,6 +88,27 @@ deepbrain sync rss --add https://blog.example.com/feed.xml
 deepbrain sync rss --run
 ```
 
+### 🆕 v1.6.0 — Playground, Enhanced Chat & Doctor
+
+```bash
+# 🧪 Interactive Playground — try DeepBrain without any setup!
+deepbrain playground              # launches web UI with /playground route
+# Pre-loaded sample knowledge base, live search & chat demo
+
+# 💬 Enhanced Chat — multi-turn with memory
+deepbrain chat -i                 # interactive multi-turn conversation
+deepbrain chat -i --session <id>  # resume a previous session
+# Commands in chat: /save (bookmark), /context (show sources), /sessions, /quit
+# Better RAG: more chunks, re-ranking, inline citations [1][2]
+
+# 🩺 Health Check
+deepbrain doctor                  # checks config, API key, DB, embedding model
+
+# 🎯 Improved Init
+deepbrain init gemini             # now shows pricing, auto-detects env keys,
+                                  # and displays Getting Started checklist
+```
+
 ---
 
 ## 📥 Import Sources

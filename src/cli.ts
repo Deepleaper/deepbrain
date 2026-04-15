@@ -26,7 +26,8 @@ import { homedir } from 'node:os';
 import { Brain } from './core/brain.js';
 import type { DeepBrainConfig } from './core/types.js';
 import { dream } from './dream/index.js';
-import { chatWithBrain, chatWithBrains } from './commands/chat.js';
+import { chatWithBrain, chatWithBrains, interactiveChat } from './commands/chat.js';
+import { runDoctor, formatDoctorResult } from './commands/doctor.js';
 import { generateFlashcards, getDueCards, reviewCard, getFlashcardStats, sm2, type ReviewGrade } from './flashcards.js';
 import { generateDigestEmail, type DigestEmailConfig } from './digest-email.js';
 import { createChat } from 'agentkits';
@@ -194,6 +195,17 @@ async function main() {
       const dataDir = join(brainDir, 'brain');
       const dbDir = join(brainDir, 'data');
 
+      // Provider descriptions
+      const providerInfo: Record<string, { desc: string; pricing: string }> = {
+        ollama: { desc: 'Local models, no API key needed', pricing: 'Free (runs locally)' },
+        openai: { desc: 'GPT-4o, text-embedding-3-small', pricing: '~$0.02/1M tokens' },
+        gemini: { desc: 'Gemini Pro, embedding-001', pricing: 'Free tier available' },
+        deepseek: { desc: 'DeepSeek-V3, fast & affordable', pricing: '~$0.14/1M tokens' },
+        dashscope: { desc: 'Qwen (通义千问), great for Chinese', pricing: '¥0.0008/1K tokens' },
+        zhipu: { desc: 'GLM-4 (智谱), Chinese-optimized', pricing: '¥0.001/1K tokens' },
+        moonshot: { desc: 'Kimi (月之暗面), long context', pricing: '¥0.012/1K tokens' },
+      };
+
       const config: Partial<DeepBrainConfig> = {
         engine: 'pglite',
         database: dbDir,
@@ -205,6 +217,7 @@ async function main() {
       const envKey = ENV_KEYS[provider];
       if (envKey && process.env[envKey]) {
         config.api_key = process.env[envKey];
+        console.log(`\n🔑 Auto-detected API key from ${envKey}`);
       }
 
       mkdirSync(brainDir, { recursive: true });
@@ -222,11 +235,13 @@ async function main() {
         mkdirSync('./deepbrain-data', { recursive: true });
       }
 
+      const info = providerInfo[provider] ?? { desc: 'Custom provider', pricing: 'varies' };
       console.log(`\n🧠 DeepBrain initialized!`);
-      console.log(`   Brain: ${brainName}`);
-      console.log(`   Provider: ${provider}`);
-      console.log(`   Config: ${configFile}`);
-      console.log(`   Data: ${dbDir}`);
+      console.log(`   Brain:    ${brainName}`);
+      console.log(`   Provider: ${provider} — ${info.desc}`);
+      console.log(`   Pricing:  ${info.pricing}`);
+      console.log(`   Config:   ${configFile}`);
+      console.log(`   Data:     ${dbDir}`);
 
       // Apply template if specified
       if (templateResult.value) {
@@ -242,7 +257,23 @@ async function main() {
         }
       }
 
-      console.log(`\n   Try: deepbrain put my-first-note notes.md`);
+      // Getting started checklist
+      console.log(`\n📋 Getting Started Checklist:`);
+      console.log(`   ${config.api_key ? '✅' : '⬜'} API key configured${!config.api_key && envKey ? ` (set ${envKey})` : ''}`);
+      console.log(`   ⬜ Add your first note:   deepbrain put my-note notes.md`);
+      console.log(`   ⬜ Search your brain:      deepbrain query "something"`);
+      console.log(`   ⬜ Chat with your brain:   deepbrain chat "question"`);
+      console.log(`   ⬜ Try the playground:     deepbrain playground`);
+      console.log(`   ⬜ Check health:           deepbrain doctor`);
+
+      if (!config.api_key && provider !== 'ollama') {
+        console.log(`\n💡 Available providers & pricing:`);
+        for (const [p, pi] of Object.entries(providerInfo)) {
+          const envK = ENV_KEYS[p] ?? '';
+          console.log(`   ${p.padEnd(12)} ${pi.desc.padEnd(40)} ${pi.pricing}${envK ? `  (env: ${envK})` : ''}`);
+        }
+      }
+      console.log('');
       break;
     }
 
@@ -427,10 +458,13 @@ async function main() {
       args = modelResult.args;
       const brainsResult = extractFlag(args, '--brains', '');
       args = brainsResult.args;
+      const sessionResult = extractFlag(args, '--session', '');
+      args = sessionResult.args;
+      const interactiveResult = hasFlag(args, '-i');
+      args = interactiveResult.args;
 
       const question = args.slice(1).join(' ');
-      if (!question) { console.error('Usage: deepbrain chat "your question" [--brains personal,work,research] [--provider deepseek] [--model ...]'); break; }
-
+      
       const config = loadConfig(brainName);
       const chatOpts = {
         provider: providerResult.value || config.llm_provider || config.embedding_provider,
@@ -438,10 +472,24 @@ async function main() {
         apiKey: config.api_key,
       };
 
+      // Interactive mode: no question needed
+      if (interactiveResult.present || !question) {
+        const brains: Array<{ brain: any; name: string }> = [];
+        if (brainsResult.value) {
+          const brainNames = brainsResult.value.split(',').map(s => s.trim());
+          for (const name of brainNames) brains.push({ brain: await getBrain(name), name });
+        } else {
+          brains.push({ brain: await getBrain(brainName), name: brainName });
+        }
+        await interactiveChat(brains, { ...chatOpts, sessionId: sessionResult.value || undefined });
+        for (const { brain } of brains) await brain.disconnect();
+        break;
+      }
+
       if (brainsResult.value) {
         // Multi-brain chat
         const brainNames = brainsResult.value.split(',').map(s => s.trim());
-        const brains: Array<{ brain: Brain; name: string }> = [];
+        const brains: Array<{ brain: any; name: string }> = [];
         for (const name of brainNames) {
           brains.push({ brain: await getBrain(name), name });
         }
@@ -1207,6 +1255,32 @@ async function main() {
       break;
     }
 
+    case 'doctor': {
+      const configFile = getConfigFile(brainName);
+      const config = loadConfig(brainName);
+      console.log('🩺 Running health checks...\n');
+      const result = await runDoctor(configFile, config);
+      console.log(formatDoctorResult(result));
+      break;
+    }
+
+    case 'playground': {
+      const portResult = extractFlag(args, '--port', '3000');
+      const hostResult = extractFlag(args, '--host', '0.0.0.0');
+      const config = loadConfig(brainName);
+      const webhookConfig = loadWebhookConfig(config as Record<string, unknown>);
+
+      await startWebUI({
+        port: parseInt(portResult.value),
+        host: hostResult.value,
+        brainConfig: config,
+        locale: getLocale() as any,
+        webhookConfig,
+      });
+      console.log(`\n🧪 Open http://localhost:${portResult.value}/playground for the interactive demo\n`);
+      break;
+    }
+
     default:
       console.log(`
 🧠 DeepBrain - Personal AI Brain
@@ -1214,11 +1288,15 @@ async function main() {
 Commands:
   deepbrain init [provider]              Initialize (default: ollama)
   deepbrain init --template research     Initialize with template
+  deepbrain doctor                       Health check (config, API, DB)
+  deepbrain playground [--port 3000]     Launch interactive playground
   deepbrain put <slug> [file]            Add/update a page (auto-summarizes)
   deepbrain get <slug>                   Read a page
   deepbrain query "text"                 Semantic search (hybrid)
   deepbrain search "keyword"             Keyword search
   deepbrain chat "question"              Chat with your brain (RAG)
+  deepbrain chat -i                      Interactive multi-turn chat
+  deepbrain chat -i --session <id>       Resume a saved chat session
   deepbrain chat "q" --brains a,b,c      Chat across multiple brains
   deepbrain import github --repo o/r     Import GitHub repo (README, docs, wiki)
   deepbrain import github-stars --user u Import starred repos as knowledge
