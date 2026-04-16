@@ -55,6 +55,28 @@ import { backupBrain, restoreBrain } from './backup.js';
 import { applyTemplate, listTemplates, TEMPLATES } from './templates.js';
 import { importGitHubRepo, importGitHubStars } from './import/github.js';
 import { importYouTube } from './import/youtube.js';
+import { importNotion } from './import/notion.js';
+import { importObsidian } from './import/obsidian.js';
+import { importYuque } from './import/yuque.js';
+import type { ImportedPage } from './import/yuque.js';
+import { importFeishu } from './import/feishu.js';
+import { importShimo } from './import/shimo.js';
+import { importWechat } from './import/wechat.js';
+import { importEbook } from './import/ebook.js';
+import { importEvernote } from './import/evernote.js';
+import { importRoam } from './import/roam.js';
+import { importLogseq } from './import/logseq.js';
+import { importBear } from './import/bear.js';
+import { importGoogleKeep } from './import/google-keep.js';
+import { importOneNote } from './import/onenote.js';
+import { importJoplin } from './import/joplin.js';
+import { importReadwise } from './import/readwise.js';
+import { importDayOne } from './import/dayone.js';
+import { importAppleNotes } from './import/apple-notes.js';
+import { importFlomo } from './import/flomo.js';
+import { importWolai } from './import/wolai.js';
+import { importFlowUs } from './import/flowus.js';
+import { importSiyuan } from './import/siyuan.js';
 import { addFeed, removeFeed, listFeeds, syncRssFeeds } from './sync/rss.js';
 import { serveSharedBrain, exportStaticSite } from './collab.js';
 
@@ -114,6 +136,30 @@ async function getBrain(brainName: string): Promise<Brain> {
   const brain = new Brain(config);
   await brain.connect();
   return brain;
+}
+
+// ── Import helper ────────────────────────────────────────────────
+
+async function saveImportedPages(brain: Brain, pages: ImportedPage[]): Promise<{ imported: number; skipped: number }> {
+  let imported = 0;
+  let skipped = 0;
+  for (const page of pages) {
+    try {
+      await brain.put(page.slug, {
+        type: (page.metadata.type as string) ?? 'note',
+        title: page.title,
+        compiled_truth: page.body,
+        frontmatter: page.metadata,
+      });
+      for (const tag of page.tags) {
+        await brain.tag(page.slug, tag);
+      }
+      imported++;
+    } catch {
+      skipped++;
+    }
+  }
+  return { imported, skipped };
 }
 
 // ── Auto-summary helper ─────────────────────────────────────────
@@ -1084,6 +1130,7 @@ async function main() {
 
     case 'import': {
       const sub = args[1];
+
       if (sub === 'github') {
         const repoResult = extractFlag(args, '--repo', '');
         args = repoResult.args;
@@ -1140,8 +1187,254 @@ async function main() {
         console.log(`\n✅ YouTube imported: "${result.title}" (${result.transcript_length} chars)`);
         await brain.disconnect();
 
+      } else if (sub === 'notion') {
+        const pathArg = args[2];
+        if (!pathArg) { console.error('Usage: deepbrain import notion <path> [--prefix notion/]'); break; }
+        const prefixResult = extractFlag(args, '--prefix', '');
+        args = prefixResult.args;
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Notion...');
+        const result = await importNotion(brain, pathArg, {
+          prefix: prefixResult.value || undefined,
+          onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`),
+        });
+        console.log(`\n✅ Notion import: ${result.imported} imported, ${result.skipped} skipped`);
+        if (result.errors.length > 0) result.errors.forEach(e => console.log(`  ❌ ${e.file}: ${e.error}`));
+        await brain.disconnect();
+
+      } else if (sub === 'obsidian') {
+        const vaultPath = args[2];
+        if (!vaultPath) { console.error('Usage: deepbrain import obsidian <vault-path> [--prefix obsidian/]'); break; }
+        const prefixResult = extractFlag(args, '--prefix', '');
+        args = prefixResult.args;
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing Obsidian vault...');
+        const result = await importObsidian(brain, vaultPath, {
+          prefix: prefixResult.value || undefined,
+          onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`),
+        });
+        console.log(`\n✅ Obsidian import: ${result.imported} imported, ${result.skipped} skipped`);
+        if (result.errors.length > 0) result.errors.forEach(e => console.log(`  ❌ ${e.file}: ${e.error}`));
+        await brain.disconnect();
+
+      } else if (sub === 'yuque') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import yuque <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Yuque (语雀)...');
+        const pages = await importYuque({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Yuque import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'feishu') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import feishu <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Feishu / Lark (飞书)...');
+        const pages = await importFeishu({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Feishu import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'shimo') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import shimo <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Shimo (石墨文档)...');
+        const pages = await importShimo({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Shimo import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'wechat') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import wechat <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing WeChat articles (微信公众号)...');
+        const pages = await importWechat({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ WeChat import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'evernote') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import evernote <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Evernote (.enex)...');
+        const pages = await importEvernote({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Evernote import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'logseq') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import logseq <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing Logseq graph...');
+        const pages = await importLogseq({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Logseq import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'bear') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import bear <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Bear...');
+        const pages = await importBear({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Bear import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'google-keep') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import google-keep <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Google Keep...');
+        const pages = await importGoogleKeep({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Google Keep import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'onenote') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import onenote <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from OneNote...');
+        const pages = await importOneNote({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ OneNote import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'joplin') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import joplin <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Joplin...');
+        const pages = await importJoplin({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Joplin import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'readwise') {
+        const file = args[2];
+        if (!file) { console.error('Usage: deepbrain import readwise <file.csv|json>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Readwise...');
+        const pages = await importReadwise({ file, onProgress: (i, t, title) => process.stdout.write(`  [${i}/${t}] ${title}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Readwise import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'roam') {
+        const file = args[2];
+        if (!file) { console.error('Usage: deepbrain import roam <file.json>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Roam Research...');
+        const pages = await importRoam({ file, onProgress: (i, t, title) => process.stdout.write(`  [${i}/${t}] ${title}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Roam import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'dayone') {
+        const file = args[2];
+        if (!file) { console.error('Usage: deepbrain import dayone <file.json>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Day One...');
+        const pages = await importDayOne({ file, onProgress: (i, t, title) => process.stdout.write(`  [${i}/${t}] ${title}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Day One import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'flomo') {
+        const file = args[2];
+        if (!file) { console.error('Usage: deepbrain import flomo <file.html|md>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Flomo...');
+        const pages = await importFlomo({ file, onProgress: (i, t, title) => process.stdout.write(`  [${i}/${t}] ${title}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Flomo import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'apple-notes') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import apple-notes <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Apple Notes...');
+        const pages = await importAppleNotes({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Apple Notes import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'wolai') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import wolai <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from Wolai (我来)...');
+        const pages = await importWolai({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Wolai import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'flowus') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import flowus <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from FlowUs (息流)...');
+        const pages = await importFlowUs({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ FlowUs import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'siyuan') {
+        const dir = args[2];
+        if (!dir) { console.error('Usage: deepbrain import siyuan <dir>'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing from SiYuan (思源笔记)...');
+        const pages = await importSiyuan({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ SiYuan import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'ebook') {
+        const files = args.slice(2);
+        if (!files.length) { console.error('Usage: deepbrain import ebook <file.epub|pdf> [file2...]'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 Importing ebook(s)...');
+        const pages = await importEbook({ files, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ Ebook import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
       } else {
-        console.error('Usage: deepbrain import <github|github-stars|youtube> [options]');
+        console.error(`Usage: deepbrain import <platform> [options]
+
+Platforms:
+  github       --repo owner/repo [--token TOKEN]    Import GitHub repo docs
+  github-stars --user <user> [--limit 100]           Import starred repos
+  youtube      <url>                                 Import transcript + summary
+  notion       <path> [--prefix notion/]             Import Notion export
+  obsidian     <vault-path>                          Import Obsidian vault
+  evernote     <dir>                                 Import .enex export
+  logseq       <dir>                                 Import Logseq graph
+  roam         <file.json>                           Import Roam JSON export
+  bear         <dir>                                 Import Bear notes
+  joplin       <dir>                                 Import Joplin export
+  readwise     <file.csv|json>                       Import Readwise highlights
+  dayone       <file.json>                           Import Day One journal
+  apple-notes  <dir>                                 Import Apple Notes HTML
+  google-keep  <dir>                                 Import Google Keep JSON
+  onenote      <dir>                                 Import OneNote HTML
+  yuque        <dir>                                 Import 语雀 export
+  feishu       <dir>                                 Import 飞书 export
+  shimo        <dir>                                 Import 石墨 export
+  wechat       <dir>                                 Import WeChat articles
+  flomo        <file.html|md>                        Import Flomo memos
+  wolai        <dir>                                 Import 我来 export
+  flowus       <dir>                                 Import FlowUs export
+  siyuan       <dir>                                 Import 思源笔记 export
+  ebook        <file.epub|pdf>...                    Import EPUB/PDF files`);
       }
       break;
     }
@@ -1301,6 +1594,27 @@ Commands:
   deepbrain import github --repo o/r     Import GitHub repo (README, docs, wiki)
   deepbrain import github-stars --user u Import starred repos as knowledge
   deepbrain import youtube <url>         Import YouTube transcript + summary
+  deepbrain import notion <path>         Import Notion export (MD/HTML/CSV)
+  deepbrain import obsidian <vault>      Import Obsidian vault (wikilinks, tags)
+  deepbrain import evernote <dir>        Import Evernote .enex export
+  deepbrain import logseq <dir>          Import Logseq graph
+  deepbrain import roam <file.json>      Import Roam Research JSON
+  deepbrain import bear <dir>            Import Bear notes
+  deepbrain import joplin <dir>          Import Joplin export
+  deepbrain import readwise <file>       Import Readwise CSV/JSON highlights
+  deepbrain import dayone <file.json>    Import Day One journal
+  deepbrain import apple-notes <dir>     Import Apple Notes HTML
+  deepbrain import google-keep <dir>     Import Google Keep Takeout
+  deepbrain import onenote <dir>         Import OneNote HTML export
+  deepbrain import yuque <dir>           Import 语雀 export
+  deepbrain import feishu <dir>          Import 飞书 export
+  deepbrain import shimo <dir>           Import 石墨文档 export
+  deepbrain import wechat <dir>          Import 微信公众号 articles
+  deepbrain import flomo <file>          Import Flomo memos
+  deepbrain import wolai <dir>           Import 我来 export
+  deepbrain import flowus <dir>          Import FlowUs export
+  deepbrain import siyuan <dir>          Import 思源笔记 export
+  deepbrain import ebook <file>          Import EPUB/PDF files
   deepbrain sync rss --add <url>         Subscribe to RSS feed
   deepbrain sync rss --run               Fetch all RSS feeds
   deepbrain sync rss --list              List RSS subscriptions

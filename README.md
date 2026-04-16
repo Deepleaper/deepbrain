@@ -29,7 +29,7 @@
 - 🔍 **语义搜索** — 不用记关键词，用你的话问就行
 - 🧩 **知识图谱** — 自动发现知识之间的关联
 - 📇 **闪卡复习** — SM-2 间隔重复算法，把知识刻进记忆
-- 📥 **导入一切** — 21 个平台一键导入，8 个中文平台原生支持
+- 📥 **导入一切** — 24 个平台一键导入，8 个中文平台原生支持
 - 🏠 **本地优先** — 数据 100% 在你手里，无需云服务
 - 🤖 **MCP 集成** — 让 Claude、Cursor 等 AI 助手直接读取你的知识
 
@@ -81,19 +81,32 @@ deepbrain chat "总结一下本周的关键决策"
 
 | 数据源 | 命令 |
 |--------|------|
-| **Obsidian** | `deepbrain import obsidian ./vault` |
-| **Notion** | `deepbrain sync notion --token T --database D` |
-| **语雀** | `deepbrain import yuque` |
-| **飞书** | `deepbrain import feishu` |
-| **微信公众号** | `deepbrain import wechat` |
-| **Flomo** | `deepbrain import flomo` |
-| **石墨** | `deepbrain import shimo` |
-| **思源笔记** | `deepbrain import siyuan` |
+| **Obsidian** | `deepbrain import obsidian <vault-path>` |
+| **Notion** | `deepbrain import notion <export-path>` |
+| **Evernote** | `deepbrain import evernote <dir>` |
+| **Logseq** | `deepbrain import logseq <dir>` |
+| **Roam Research** | `deepbrain import roam <file.json>` |
+| **Bear** | `deepbrain import bear <dir>` |
+| **Joplin** | `deepbrain import joplin <dir>` |
+| **Readwise** | `deepbrain import readwise <file.csv\|json>` |
+| **Day One** | `deepbrain import dayone <file.json>` |
+| **Apple Notes** | `deepbrain import apple-notes <dir>` |
+| **Google Keep** | `deepbrain import google-keep <dir>` |
+| **OneNote** | `deepbrain import onenote <dir>` |
+| **语雀** | `deepbrain import yuque <dir>` |
+| **飞书** | `deepbrain import feishu <dir>` |
+| **微信公众号** | `deepbrain import wechat <dir>` |
+| **Flomo** | `deepbrain import flomo <file.html\|md>` |
+| **石墨文档** | `deepbrain import shimo <dir>` |
+| **思源笔记** | `deepbrain import siyuan <dir>` |
+| **我来 Wolai** | `deepbrain import wolai <dir>` |
+| **FlowUs 息流** | `deepbrain import flowus <dir>` |
 | **GitHub** | `deepbrain import github --repo owner/repo` |
+| **GitHub Stars** | `deepbrain import github-stars --user <name>` |
 | **YouTube** | `deepbrain import youtube <url>` |
+| **EPUB/PDF** | `deepbrain import ebook <file.epub\|pdf>` |
 | **RSS** | `deepbrain sync rss --add <url>` |
-| **EPUB/PDF** | `deepbrain import ebook <file>` |
-| 还有 Evernote、Roam、Logseq、Bear、Day One 等 | **共 21 个平台** |
+| **Notion (实时同步)** | `deepbrain sync notion --token T --database D` |
 
 ### 分享与协作
 
@@ -343,7 +356,7 @@ deepbrain chat "summarize our key decisions this week"
 - **Hybrid Search** — Semantic + keyword with automatic ranking
 - **Knowledge Graph** — Auto-extract entities and relationships
 - **Flashcards** — SM-2 spaced repetition from your knowledge
-- **21 Importers** — Notion, Obsidian, Evernote, 8 Chinese platforms, GitHub, YouTube, RSS…
+- **24 Importers** — Notion, Obsidian, Evernote, Logseq, Roam, Bear, Joplin, Readwise, Day One, Apple Notes, Google Keep, OneNote, 8 Chinese platforms, GitHub, YouTube, EPUB/PDF…
 - **Local-first** — PGLite + pgvector, no external database
 - **MCP Server** — Connect Claude Desktop, Cursor, and other AI assistants
 - **7 AI Providers** — ollama, openai, gemini, deepseek, dashscope, zhipu, moonshot
