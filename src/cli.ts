@@ -23,6 +23,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
+import { createInterface } from 'node:readline';
 import { Brain } from './core/brain.js';
 import type { DeepBrainConfig } from './core/types.js';
 import { dream } from './dream/index.js';
@@ -237,15 +238,10 @@ async function main() {
     case 'init': {
       const templateResult = extractFlag(args, '--template', '');
       args = templateResult.args;
+      const checkResult = hasFlag(args, '--check');
+      args = checkResult.args;
       const llmProviderResult = extractFlag(args, '--llm-provider', '');
       args = llmProviderResult.args;
-      const embeddingProvider = args[1] ?? 'ollama';
-      const llmProvider = llmProviderResult.value || undefined;
-      const mixedMode = llmProvider && llmProvider !== embeddingProvider;
-
-      const brainDir = getBrainDir(brainName);
-      const dataDir = join(brainDir, 'brain');
-      const dbDir = join(brainDir, 'data');
 
       // Provider descriptions
       const providerInfo: Record<string, { desc: string; pricing: string }> = {
@@ -257,6 +253,83 @@ async function main() {
         zhipu: { desc: 'GLM-4 (智谱), Chinese-optimized', pricing: '¥0.001/1K tokens' },
         moonshot: { desc: 'Kimi (月之暗面), long context', pricing: '¥0.012/1K tokens' },
       };
+
+      // --check: validate current config
+      if (checkResult.present) {
+        console.log('\n🔍 Checking DeepBrain configuration...\n');
+        const configFile = getConfigFile(brainName);
+        if (!existsSync(configFile)) {
+          console.error(`❌ No config found at ${configFile}`);
+          console.error(`   Run 'deepbrain init [provider]' first.\n`);
+          break;
+        }
+        const existingConfig = loadConfig(brainName);
+        console.log(`   Config:   ${configFile} ✅`);
+        console.log(`   Provider: ${existingConfig.embedding_provider ?? 'not set'}`);
+        console.log(`   API Key:  ${existingConfig.api_key ? '✅ configured' : '⚠️  not set'}`);
+
+        // Test embedding connection
+        try {
+          const brain = await getBrain(brainName);
+          const stats = await brain.stats();
+          console.log(`   Database: ✅ connected (${stats.page_count} pages, ${stats.chunk_count} chunks)`);
+          await brain.disconnect();
+        } catch (e: any) {
+          console.error(`   Database: ❌ ${e.message}`);
+        }
+
+        // Check env vars
+        const detectedEnvKeys: string[] = [];
+        for (const [prov, envK] of Object.entries(ENV_KEYS)) {
+          if (process.env[envK]) detectedEnvKeys.push(`${prov} (${envK})`);
+        }
+        if (detectedEnvKeys.length > 0) {
+          console.log(`\n   🔑 API keys found in environment:`);
+          for (const k of detectedEnvKeys) console.log(`      ${k}`);
+        }
+        console.log('');
+        break;
+      }
+
+      // Interactive provider selection if no provider argument given
+      let embeddingProvider = args[1] ?? '';
+      if (!embeddingProvider) {
+        // Auto-detect available API keys from env
+        const detectedProviders: string[] = [];
+        for (const [prov, envK] of Object.entries(ENV_KEYS)) {
+          if (process.env[envK]) detectedProviders.push(prov);
+        }
+
+        console.log('\n🧠 Welcome to DeepBrain!\n');
+        console.log('   Select an embedding provider:\n');
+        for (let i = 0; i < AVAILABLE_PROVIDERS.length; i++) {
+          const p = AVAILABLE_PROVIDERS[i];
+          const info = providerInfo[p] ?? { desc: 'Custom', pricing: '' };
+          const envK = ENV_KEYS[p];
+          const detected = envK && process.env[envK] ? ' 🔑' : '';
+          console.log(`   ${i + 1}) ${p.padEnd(12)} ${info.desc}${detected}`);
+        }
+
+        if (detectedProviders.length > 0) {
+          console.log(`\n   🔑 = API key detected in environment`);
+        }
+
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await new Promise<string>(resolve => {
+          rl.question(`\n   Choose [1-${AVAILABLE_PROVIDERS.length}] (default: 1 = ollama): `, resolve);
+        });
+        rl.close();
+
+        const choice = parseInt(answer.trim()) || 1;
+        embeddingProvider = AVAILABLE_PROVIDERS[Math.max(0, Math.min(choice - 1, AVAILABLE_PROVIDERS.length - 1))];
+      }
+
+      const llmProvider = llmProviderResult.value || undefined;
+      const mixedMode = llmProvider && llmProvider !== embeddingProvider;
+
+      const brainDir = getBrainDir(brainName);
+      const dataDir = join(brainDir, 'brain');
+      const dbDir = join(brainDir, 'data');
 
       const config: Partial<DeepBrainConfig> = {
         engine: 'pglite',
@@ -289,12 +362,23 @@ async function main() {
         }
       }
 
-      mkdirSync(brainDir, { recursive: true });
-      mkdirSync(dataDir, { recursive: true });
-      mkdirSync(dbDir, { recursive: true });
+      try {
+        mkdirSync(brainDir, { recursive: true });
+        mkdirSync(dataDir, { recursive: true });
+        mkdirSync(dbDir, { recursive: true });
+      } catch (e: any) {
+        console.error(`\n❌ Failed to create directories: ${e.message}`);
+        console.error(`   Check permissions for: ${brainDir}`);
+        break;
+      }
 
       const configFile = join(brainDir, 'deepbrain.json');
-      writeFileSync(configFile, JSON.stringify(config, null, 2));
+      try {
+        writeFileSync(configFile, JSON.stringify(config, null, 2));
+      } catch (e: any) {
+        console.error(`\n❌ Failed to write config: ${e.message}`);
+        break;
+      }
 
       // Also write root config for backward compat if default brain
       if (brainName === 'default') {
@@ -332,10 +416,13 @@ async function main() {
         }
       }
 
-      // Getting started checklist
+      // Welcome message with quick-start tips
       const embeddingKeyOk = !!(config.embedding_api_key ?? config.api_key) || embeddingProvider === 'ollama';
       const llmKeyOk = !mixedMode || !!(config.llm_api_key ?? config.api_key) || llmProvider === 'ollama';
-      console.log(`\n📋 Getting Started Checklist:`);
+      console.log(`\n${'─'.repeat(50)}`);
+      console.log(`🎉 Welcome to DeepBrain — Your Personal AI Brain!`);
+      console.log(`${'─'.repeat(50)}`);
+      console.log(`\n📋 Quick Start:`);
       if (mixedMode) {
         const llmEnvKey = ENV_KEYS[llmProvider!] ?? '';
         console.log(`   ${embeddingKeyOk ? '✅' : '⬜'} Embedding API key${!embeddingKeyOk && embeddingEnvKey ? ` (set ${embeddingEnvKey})` : ''}`);
@@ -344,11 +431,20 @@ async function main() {
         const hasKey = !!(config.api_key) || embeddingProvider === 'ollama';
         console.log(`   ${hasKey ? '✅' : '⬜'} API key configured${!hasKey && embeddingEnvKey ? ` (set ${embeddingEnvKey})` : ''}`);
       }
-      console.log(`   ⬜ Add your first note:   deepbrain put my-note notes.md`);
-      console.log(`   ⬜ Search your brain:      deepbrain query "something"`);
-      console.log(`   ⬜ Chat with your brain:   deepbrain chat "question"`);
-      console.log(`   ⬜ Try the playground:     deepbrain playground`);
-      console.log(`   ⬜ Check health:           deepbrain doctor`);
+      console.log(`\n   1. Add your first note:`);
+      console.log(`      $ deepbrain put my-note notes.md`);
+      console.log(`      $ echo "Hello World" | deepbrain put hello`);
+      console.log(`\n   2. Search your brain:`);
+      console.log(`      $ deepbrain query "something"`);
+      console.log(`\n   3. Chat with your brain:`);
+      console.log(`      $ deepbrain chat "what do I know about X?"`);
+      console.log(`      $ deepbrain chat -i  # interactive mode`);
+      console.log(`\n   4. Import from external sources:`);
+      console.log(`      $ deepbrain import github --repo owner/repo`);
+      console.log(`      $ deepbrain sync rss --add https://...`);
+      console.log(`\n   5. Check health anytime:`);
+      console.log(`      $ deepbrain init --check`);
+      console.log(`      $ deepbrain doctor`);
 
       if ((!config.api_key && !config.embedding_api_key) && embeddingProvider !== 'ollama') {
         console.log(`\n💡 Available providers & pricing:`);
