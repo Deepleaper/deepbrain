@@ -62,6 +62,7 @@ import type { ImportedPage } from './import/yuque.js';
 import { importFeishu } from './import/feishu.js';
 import { importShimo } from './import/shimo.js';
 import { importWechat } from './import/wechat.js';
+import { importWechatArticle } from './import/wechat-article.js';
 import { importEbook } from './import/ebook.js';
 import { importEvernote } from './import/evernote.js';
 import { importRoam } from './import/roam.js';
@@ -171,7 +172,7 @@ async function generateSummaryAndTags(
   const chat = createChat({
     provider: (config.llm_provider ?? config.embedding_provider ?? 'ollama') as any,
     model: config.llm_model,
-    apiKey: config.api_key,
+    apiKey: config.llm_api_key ?? config.api_key,
   });
 
   const messages: ChatMessage[] = [
@@ -236,7 +237,12 @@ async function main() {
     case 'init': {
       const templateResult = extractFlag(args, '--template', '');
       args = templateResult.args;
-      const provider = args[1] ?? 'ollama';
+      const llmProviderResult = extractFlag(args, '--llm-provider', '');
+      args = llmProviderResult.args;
+      const embeddingProvider = args[1] ?? 'ollama';
+      const llmProvider = llmProviderResult.value || undefined;
+      const mixedMode = llmProvider && llmProvider !== embeddingProvider;
+
       const brainDir = getBrainDir(brainName);
       const dataDir = join(brainDir, 'brain');
       const dbDir = join(brainDir, 'data');
@@ -255,15 +261,32 @@ async function main() {
       const config: Partial<DeepBrainConfig> = {
         engine: 'pglite',
         database: dbDir,
-        embedding_provider: provider,
+        embedding_provider: embeddingProvider,
         data_dir: dataDir,
       };
 
-      // Auto-detect API key from env
-      const envKey = ENV_KEYS[provider];
-      if (envKey && process.env[envKey]) {
-        config.api_key = process.env[envKey];
-        console.log(`\n🔑 Auto-detected API key from ${envKey}`);
+      if (llmProvider) {
+        config.llm_provider = llmProvider;
+      }
+
+      // Auto-detect API keys from env
+      const embeddingEnvKey = ENV_KEYS[embeddingProvider];
+      if (embeddingEnvKey && process.env[embeddingEnvKey]) {
+        if (mixedMode) {
+          config.embedding_api_key = process.env[embeddingEnvKey];
+          console.log(`\n🔑 Auto-detected embedding API key from ${embeddingEnvKey}`);
+        } else {
+          config.api_key = process.env[embeddingEnvKey];
+          console.log(`\n🔑 Auto-detected API key from ${embeddingEnvKey}`);
+        }
+      }
+
+      if (mixedMode && llmProvider) {
+        const llmEnvKey = ENV_KEYS[llmProvider];
+        if (llmEnvKey && process.env[llmEnvKey]) {
+          config.llm_api_key = process.env[llmEnvKey];
+          console.log(`🔑 Auto-detected LLM API key from ${llmEnvKey}`);
+        }
       }
 
       mkdirSync(brainDir, { recursive: true });
@@ -281,13 +304,19 @@ async function main() {
         mkdirSync('./deepbrain-data', { recursive: true });
       }
 
-      const info = providerInfo[provider] ?? { desc: 'Custom provider', pricing: 'varies' };
+      const embInfo = providerInfo[embeddingProvider] ?? { desc: 'Custom provider', pricing: 'varies' };
       console.log(`\n🧠 DeepBrain initialized!`);
-      console.log(`   Brain:    ${brainName}`);
-      console.log(`   Provider: ${provider} — ${info.desc}`);
-      console.log(`   Pricing:  ${info.pricing}`);
-      console.log(`   Config:   ${configFile}`);
-      console.log(`   Data:     ${dbDir}`);
+      console.log(`   Brain:             ${brainName}`);
+      if (mixedMode) {
+        const llmInfo = providerInfo[llmProvider!] ?? { desc: 'Custom provider', pricing: 'varies' };
+        console.log(`   Embedding:         ${embeddingProvider} — ${embInfo.desc}`);
+        console.log(`   LLM:               ${llmProvider} — ${llmInfo.desc}`);
+      } else {
+        console.log(`   Provider:          ${embeddingProvider} — ${embInfo.desc}`);
+        console.log(`   Pricing:           ${embInfo.pricing}`);
+      }
+      console.log(`   Config:            ${configFile}`);
+      console.log(`   Data:              ${dbDir}`);
 
       // Apply template if specified
       if (templateResult.value) {
@@ -304,15 +333,24 @@ async function main() {
       }
 
       // Getting started checklist
+      const embeddingKeyOk = !!(config.embedding_api_key ?? config.api_key) || embeddingProvider === 'ollama';
+      const llmKeyOk = !mixedMode || !!(config.llm_api_key ?? config.api_key) || llmProvider === 'ollama';
       console.log(`\n📋 Getting Started Checklist:`);
-      console.log(`   ${config.api_key ? '✅' : '⬜'} API key configured${!config.api_key && envKey ? ` (set ${envKey})` : ''}`);
+      if (mixedMode) {
+        const llmEnvKey = ENV_KEYS[llmProvider!] ?? '';
+        console.log(`   ${embeddingKeyOk ? '✅' : '⬜'} Embedding API key${!embeddingKeyOk && embeddingEnvKey ? ` (set ${embeddingEnvKey})` : ''}`);
+        console.log(`   ${llmKeyOk ? '✅' : '⬜'} LLM API key${!llmKeyOk && llmEnvKey ? ` (set ${llmEnvKey})` : ''}`);
+      } else {
+        const hasKey = !!(config.api_key) || embeddingProvider === 'ollama';
+        console.log(`   ${hasKey ? '✅' : '⬜'} API key configured${!hasKey && embeddingEnvKey ? ` (set ${embeddingEnvKey})` : ''}`);
+      }
       console.log(`   ⬜ Add your first note:   deepbrain put my-note notes.md`);
       console.log(`   ⬜ Search your brain:      deepbrain query "something"`);
       console.log(`   ⬜ Chat with your brain:   deepbrain chat "question"`);
       console.log(`   ⬜ Try the playground:     deepbrain playground`);
       console.log(`   ⬜ Check health:           deepbrain doctor`);
 
-      if (!config.api_key && provider !== 'ollama') {
+      if ((!config.api_key && !config.embedding_api_key) && embeddingProvider !== 'ollama') {
         console.log(`\n💡 Available providers & pricing:`);
         for (const [p, pi] of Object.entries(providerInfo)) {
           const envK = ENV_KEYS[p] ?? '';
@@ -515,7 +553,7 @@ async function main() {
       const chatOpts = {
         provider: providerResult.value || config.llm_provider || config.embedding_provider,
         model: modelResult.value || config.llm_model || undefined,
-        apiKey: config.api_key,
+        apiKey: config.llm_api_key ?? config.api_key,
       };
 
       // Interactive mode: no question needed
@@ -754,7 +792,7 @@ async function main() {
       const sub = args[1];
       const brain = await getBrain(brainName);
       const config = loadConfig(brainName);
-      const llmConfig = { provider: config.llm_provider ?? config.embedding_provider, model: config.llm_model, apiKey: config.api_key };
+      const llmConfig = { provider: config.llm_provider ?? config.embedding_provider, model: config.llm_model, apiKey: config.llm_api_key ?? config.api_key };
 
       if (sub === 'query') {
         const entity = args.slice(2).join(' ');
@@ -783,7 +821,7 @@ async function main() {
         period,
         provider: config.llm_provider ?? config.embedding_provider,
         model: config.llm_model,
-        apiKey: config.api_key,
+        apiKey: config.llm_api_key ?? config.api_key,
       });
       console.log(formatDigest(digest));
       await brain.disconnect();
@@ -853,7 +891,7 @@ async function main() {
         port: parseInt(portResult.value),
         host: hostResult.value,
         brainConfig: config,
-        llmConfig: { provider: config.llm_provider ?? config.embedding_provider, model: config.llm_model, apiKey: config.api_key },
+        llmConfig: { provider: config.llm_provider ?? config.embedding_provider, model: config.llm_model, apiKey: config.llm_api_key ?? config.api_key },
       });
       break;
     }
@@ -955,7 +993,7 @@ async function main() {
         const newCards = await generateFlashcards(brain, dataDir, {
           provider: config.llm_provider || config.embedding_provider,
           model: config.llm_model,
-          apiKey: config.api_key,
+          apiKey: config.llm_api_key ?? config.api_key,
           slugs: slugs.length > 0 ? slugs : undefined,
         });
         console.log(`\n✅ Generated ${newCards.length} new flashcards`);
@@ -1005,7 +1043,7 @@ async function main() {
         to: toResult.value,
         provider: config.llm_provider || config.embedding_provider,
         model: config.llm_model,
-        apiKey: config.api_key,
+        apiKey: config.llm_api_key ?? config.api_key,
         webhookUrl: webhookResult.value || undefined,
         smtp: (config as any).smtp,
       };
@@ -1181,7 +1219,7 @@ async function main() {
           summarize: true,
           provider: config.llm_provider ?? config.embedding_provider,
           model: config.llm_model,
-          apiKey: config.api_key,
+          apiKey: config.llm_api_key ?? config.api_key,
           onProgress: console.log,
         });
         console.log(`\n✅ YouTube imported: "${result.title}" (${result.transcript_length} chars)`);
@@ -1255,6 +1293,16 @@ async function main() {
         const pages = await importWechat({ dir, onProgress: (i, t, f) => process.stdout.write(`  [${i}/${t}] ${f}\r`) });
         const { imported, skipped } = await saveImportedPages(brain, pages);
         console.log(`\n✅ WeChat import: ${imported} imported, ${skipped} skipped`);
+        await brain.disconnect();
+
+      } else if (sub === 'wechat-article') {
+        const urls = args.slice(2);
+        if (!urls.length) { console.error('Usage: deepbrain import wechat-article <url> [url2 ...]'); break; }
+        const brain = await getBrain(brainName);
+        console.log('📥 抓取微信公众号文章...');
+        const pages = await importWechatArticle({ urls, onProgress: (i, t, u) => process.stdout.write(`  [${i}/${t}] ${u}\r`) });
+        const { imported, skipped } = await saveImportedPages(brain, pages);
+        console.log(`\n✅ 微信文章抓取完成：${imported} 篇已导入，${skipped} 篇跳过`);
         await brain.disconnect();
 
       } else if (sub === 'evernote') {
@@ -1429,7 +1477,8 @@ Platforms:
   yuque        <dir>                                 Import 语雀 export
   feishu       <dir>                                 Import 飞书 export
   shimo        <dir>                                 Import 石墨 export
-  wechat       <dir>                                 Import WeChat articles
+  wechat       <dir>                                 Import WeChat articles (local files)
+  wechat-article <url> [url2...]                    Fetch WeChat articles from mp.weixin.qq.com URLs
   flomo        <file.html|md>                        Import Flomo memos
   wolai        <dir>                                 Import 我来 export
   flowus       <dir>                                 Import FlowUs export

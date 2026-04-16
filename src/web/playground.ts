@@ -204,13 +204,13 @@ export function getPlaygroundHTML(): string {
   const sampleDataJSON = JSON.stringify(SAMPLE_PAGES);
 
   return `<!DOCTYPE html>
-<html lang="en"><head>
+<html lang="zh-CN"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DeepBrain Playground — Try It Now</title>
+<title>DeepBrain 知识大脑 · 互动体验</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a0a0f;--bg2:rgba(20,20,35,0.8);--bg3:rgba(30,30,50,0.6);
+  --bg:#0f0f23;--bg2:rgba(20,20,40,0.85);--bg3:rgba(30,30,50,0.6);
   --border:rgba(124,58,237,0.2);--border2:rgba(124,58,237,0.4);
   --text:#e6edf3;--text2:#8b949e;--accent:#7c3aed;--accent2:#a78bfa;--accent3:#c4b5fd;
   --success:#3fb950;--glass:rgba(124,58,237,0.08);
@@ -257,8 +257,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 .chat-container{display:flex;flex-direction:column;height:500px}
 .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
 .chat-msg{max-width:85%;padding:12px 16px;border-radius:14px;font-size:.92em;line-height:1.6}
-.chat-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),#4f46e5);color:#fff;border-bottom-right-radius:4px}
-.chat-msg.assistant{align-self:flex-start;background:var(--bg3);border:1px solid var(--border);border-bottom-left-radius:4px}
+.chat-msg.user{align-self:flex-end;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-bottom-right-radius:4px}
+.chat-msg.assistant{align-self:flex-start;background:rgba(50,50,62,0.92);border:1px solid rgba(100,100,115,0.35);border-bottom-left-radius:4px}
 .chat-msg.assistant pre{background:rgba(0,0,0,0.3);padding:8px;border-radius:6px;margin:8px 0;overflow-x:auto;font-size:.85em}
 .chat-input-row{display:flex;gap:8px;padding:16px;border-top:1px solid var(--border)}
 .chat-input{flex:1;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:.92em;outline:none;resize:none}
@@ -298,33 +298,33 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 </head>
 <body>
 <div class="pg-header">
-  <a class="pg-back" href="/">← Back to Brain</a>
-  <div class="pg-badge">🧪 INTERACTIVE DEMO</div>
-  <h1>🧠 DeepBrain Playground</h1>
-  <p>Experience AI-powered personal knowledge management — no setup required</p>
+  <a class="pg-back" href="/">← 返回大脑</a>
+  <div class="pg-badge">🧪 互动演示</div>
+  <h1>🧠 DeepBrain 知识大脑</h1>
+  <p>AI 驱动的个人知识管理 · 无需配置，即刻体验</p>
   <div class="stats-bar">
-    <div class="stat"><div class="num">8</div><div class="label">Sample Pages</div></div>
-    <div class="stat"><div class="num">26</div><div class="label">Knowledge Chunks</div></div>
-    <div class="stat"><div class="num">∞</div><div class="label">Connections</div></div>
+    <div class="stat"><div class="num">8</div><div class="label">示例笔记</div></div>
+    <div class="stat"><div class="num">26</div><div class="label">知识片段</div></div>
+    <div class="stat"><div class="num">∞</div><div class="label">关联</div></div>
   </div>
 </div>
 
 <div class="pg-tabs">
-  <div class="pg-tab active" data-tab="search">🔍 Semantic Search</div>
-  <div class="pg-tab" data-tab="chat">💬 Chat with Brain</div>
-  <div class="pg-tab" data-tab="browse">📚 Browse Knowledge</div>
+  <div class="pg-tab active" data-tab="search">🔍 语义搜索</div>
+  <div class="pg-tab" data-tab="chat">💬 与大脑对话</div>
+  <div class="pg-tab" data-tab="browse">📚 浏览知识库</div>
 </div>
 
 <!-- Search Panel -->
 <div class="pg-panel active" id="panel-search">
   <div class="glass">
-    <input class="search-input" id="search-input" placeholder="Search your knowledge... try 'how does RAG work?' or 'note taking methods'" autofocus>
+    <input class="search-input" id="search-input" placeholder="搜索知识... 试试「RAG 如何工作？」或「笔记管理方法」" autofocus>
     <div class="suggest-chips">
-      <div class="chip" data-q="how does RAG work">how does RAG work?</div>
-      <div class="chip" data-q="vector database similarity search">vector similarity search</div>
-      <div class="chip" data-q="productivity note taking system">note-taking systems</div>
-      <div class="chip" data-q="AI agents autonomous">AI agents</div>
-      <div class="chip" data-q="local first data privacy">local-first privacy</div>
+      <div class="chip" data-q="how does RAG work">RAG 如何工作？</div>
+      <div class="chip" data-q="vector database similarity search">向量语义搜索</div>
+      <div class="chip" data-q="productivity note taking system">笔记管理系统</div>
+      <div class="chip" data-q="AI agents autonomous">AI 智能体</div>
+      <div class="chip" data-q="local first data privacy">本地优先与隐私</div>
     </div>
   </div>
   <div id="search-results"></div>
@@ -334,18 +334,18 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 <div class="pg-panel" id="panel-chat">
   <div class="glass chat-container">
     <div class="chat-messages" id="chat-messages">
-      <div class="chat-msg assistant">👋 Hi! I'm your DeepBrain AI assistant. Ask me anything about the sample knowledge base — I'll search for relevant context and answer based on what I find.<br><br>Try: "What is the Zettelkasten method?" or "Compare RAG with fine-tuning"</div>
+      <div class="chat-msg assistant">👋 你好！我是你的 DeepBrain AI 助手。可以问我任何关于示例知识库的问题 —— 我会搜索相关内容并作答。<br><br>试试：「什么是 Zettelkasten 方法？」或「RAG 与微调有何区别？」</div>
     </div>
     <div class="chat-input-row">
-      <textarea class="chat-input" id="chat-input" rows="1" placeholder="Ask your brain anything..."></textarea>
-      <button class="chat-send" id="chat-send">Send →</button>
+      <textarea class="chat-input" id="chat-input" rows="1" placeholder="向大脑提问..."></textarea>
+      <button class="chat-send" id="chat-send">发送 →</button>
     </div>
   </div>
   <div class="suggest-chips" style="margin-top:12px">
-    <div class="chip chat-chip" data-q="What is the Zettelkasten method and how does it help?">Zettelkasten method</div>
-    <div class="chip chat-chip" data-q="How does DeepBrain search work? What makes it different?">How DeepBrain search works</div>
-    <div class="chip chat-chip" data-q="What are the key prompt engineering techniques?">Prompt engineering tips</div>
-    <div class="chip chat-chip" data-q="Compare Building a Second Brain with Zettelkasten">BASB vs Zettelkasten</div>
+    <div class="chip chat-chip" data-q="What is the Zettelkasten method and how does it help?">卡片盒笔记法是什么？</div>
+    <div class="chip chat-chip" data-q="How does DeepBrain search work? What makes it different?">DeepBrain 搜索原理</div>
+    <div class="chip chat-chip" data-q="What are the key prompt engineering techniques?">提示词工程技巧</div>
+    <div class="chip chat-chip" data-q="Compare Building a Second Brain with Zettelkasten">第二大脑 vs 卡片盒</div>
   </div>
 </div>
 
@@ -355,8 +355,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 </div>
 
 <div class="pg-footer">
-  <p>🧠 DeepBrain — Personal AI Knowledge Brain · <a href="https://github.com/Deepleaper/deepbrain">GitHub</a> · <a href="https://www.npmjs.com/package/deepbrain">npm</a></p>
-  <p style="margin-top:8px">This playground runs entirely in your browser. No data is sent anywhere.</p>
+  <p>🧠 DeepBrain — AI 个人知识大脑 · <a href="https://github.com/Deepleaper/deepbrain">GitHub</a> · <a href="https://www.npmjs.com/package/deepbrain">npm</a></p>
+  <p style="margin-top:8px">演示完全在浏览器本地运行，不向任何服务器发送数据。</p>
 </div>
 
 <script>
@@ -405,7 +405,7 @@ searchInput.addEventListener('input', () => {
     if (!q) { searchResults.innerHTML = ''; return; }
     const hits = search(q);
     if (hits.length === 0) {
-      searchResults.innerHTML = '<div class="glass" style="text-align:center;color:var(--text2)">No results found. Try different keywords.</div>';
+      searchResults.innerHTML = '<div class="glass" style="text-align:center;color:var(--text2)">未找到相关结果，请换个关键词试试。</div>';
       return;
     }
     searchResults.innerHTML = hits.map(h =>
@@ -449,16 +449,16 @@ async function sendChat() {
   const sources = search(q, 3);
   
   // Simulate typing delay
-  const typing = addMessage('assistant', '<span class="typing">Searching knowledge base</span>');
+  const typing = addMessage('assistant', '<span class="typing">正在搜索知识库</span>');
   await new Promise(r => setTimeout(r, 600));
 
   let answer = '';
   if (sources.length === 0) {
-    answer = "I couldn't find relevant information in the sample knowledge base.\\n\\nTry asking about: Transformers, RAG, vector databases, prompt engineering, Zettelkasten, AI agents, local-first software, or Building a Second Brain.";
+    answer = "在示例知识库中未找到相关内容。\\n\\n可以试着问：Transformer 架构、RAG 检索增强、向量数据库、提示词工程、卡片盒笔记法、AI 智能体、本地优先软件，或「第二大脑」方法论。";
   } else {
     const ctx = sources.map((s,i) => '<b>[' + (i+1) + ']</b> ' + escH(s.chunk)).join('<br><br>');
     const srcList = sources.map((s,i) => '📄 <b>[' + (i+1) + ']</b> ' + escH(s.title) + ' <span class="tag">' + (s.score*100).toFixed(0) + '%</span>').join('<br>');
-    answer = '🔍 Found ' + sources.length + ' relevant sources:\\n\\n' + ctx + '\\n\\n---\\n📚 <b>Sources:</b>\\n' + srcList;
+    answer = '🔍 找到 ' + sources.length + ' 条相关内容：\\n\\n' + ctx + '\\n\\n---\\n📚 <b>来源：</b>\\n' + srcList;
   }
 
   typing.innerHTML = answer.replace(/\\\\n/g, '<br>').replace(/\\n/g, '<br>');

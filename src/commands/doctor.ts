@@ -34,14 +34,29 @@ export async function runDoctor(configFile: string, config: Partial<DeepBrainCon
     checks.push({ name: 'Embedding provider', status: 'fail', message: 'No embedding_provider in config' });
   }
 
-  // 3. API key (if needed)
+  // 3. Embedding API key (if needed)
+  const embeddingKey = config.embedding_api_key ?? config.api_key;
   if (provider === 'ollama') {
-    checks.push({ name: 'API key', status: 'pass', message: 'Not required (local Ollama)' });
-  } else if (config.api_key) {
-    const masked = config.api_key.slice(0, 8) + '...' + config.api_key.slice(-4);
-    checks.push({ name: 'API key', status: 'pass', message: `Configured: ${masked}` });
+    checks.push({ name: 'Embedding API key', status: 'pass', message: 'Not required (local Ollama)' });
+  } else if (embeddingKey) {
+    const masked = embeddingKey.slice(0, 8) + '...' + embeddingKey.slice(-4);
+    checks.push({ name: 'Embedding API key', status: 'pass', message: `Configured: ${masked}` });
   } else {
-    checks.push({ name: 'API key', status: 'fail', message: 'No api_key in config' });
+    checks.push({ name: 'Embedding API key', status: 'fail', message: 'No embedding_api_key (or api_key) in config' });
+  }
+
+  // 3b. LLM API key — only shown when llm_provider differs from embedding_provider
+  const llmProvider = config.llm_provider;
+  if (llmProvider && llmProvider !== provider) {
+    const llmKey = config.llm_api_key ?? config.api_key;
+    if (llmProvider === 'ollama') {
+      checks.push({ name: 'LLM API key', status: 'pass', message: 'Not required (local Ollama)' });
+    } else if (llmKey) {
+      const masked = llmKey.slice(0, 8) + '...' + llmKey.slice(-4);
+      checks.push({ name: 'LLM API key', status: 'pass', message: `Configured: ${masked}` });
+    } else {
+      checks.push({ name: 'LLM API key', status: 'fail', message: `No llm_api_key (or api_key) for provider '${llmProvider}'` });
+    }
   }
 
   // 4. Database directory
@@ -53,12 +68,13 @@ export async function runDoctor(configFile: string, config: Partial<DeepBrainCon
   }
 
   // 5. Test embedding model
-  if (provider && (provider === 'ollama' || config.api_key)) {
+  const embeddingApiKey = config.embedding_api_key ?? config.api_key;
+  if (provider && (provider === 'ollama' || embeddingApiKey)) {
     try {
       const embedder = createEmbedding({
         provider: provider as any,
         model: config.embedding_model,
-        apiKey: config.api_key,
+        apiKey: embeddingApiKey,
       });
       const vec = await embedder.embed('doctor test');
       checks.push({ name: 'Embedding model', status: 'pass', message: `Working (${vec.length} dimensions)` });
@@ -70,16 +86,17 @@ export async function runDoctor(configFile: string, config: Partial<DeepBrainCon
   }
 
   // 6. Test LLM (if configured)
-  const llmProvider = config.llm_provider ?? config.embedding_provider;
-  if (llmProvider && (llmProvider === 'ollama' || config.api_key)) {
+  const effectiveLlmProvider = config.llm_provider ?? config.embedding_provider;
+  const llmApiKey = config.llm_api_key ?? config.api_key;
+  if (effectiveLlmProvider && (effectiveLlmProvider === 'ollama' || llmApiKey)) {
     try {
       const chat = createChat({
-        provider: llmProvider as any,
+        provider: effectiveLlmProvider as any,
         model: config.llm_model,
-        apiKey: config.api_key,
+        apiKey: llmApiKey,
       });
       const resp = await chat.chat([{ role: 'user', content: 'Say "ok"' }], { maxTokens: 10 });
-      checks.push({ name: 'LLM connectivity', status: 'pass', message: `Working (${llmProvider})` });
+      checks.push({ name: 'LLM connectivity', status: 'pass', message: `Working (${effectiveLlmProvider})` });
     } catch (e: any) {
       checks.push({ name: 'LLM connectivity', status: 'warn', message: `Failed: ${e.message?.slice(0, 100)}` });
     }

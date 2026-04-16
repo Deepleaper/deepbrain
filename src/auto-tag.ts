@@ -128,6 +128,6 @@ export function loadAutoTagConfig(config: Record<string, unknown>): AutoTagConfi
     maxTags: (at.maxTags as number) ?? (at.max_tags as number) ?? 5,
     provider: (config.llm_provider ?? config.embedding_provider) as string | undefined,
     model: config.llm_model as string | undefined,
-    apiKey: config.api_key as string | undefined,
+    apiKey: (config.llm_api_key ?? config.api_key) as string | undefined,
   };
 }

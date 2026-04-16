@@ -157,12 +157,16 @@ export interface DeepBrainConfig {
   embedding_provider: string;
   /** Embedding model override */
   embedding_model?: string;
-  /** API key for embedding provider */
+  /** API key for embedding provider (takes precedence over api_key) */
+  embedding_api_key?: string;
+  /** Shared API key — legacy fallback when embedding_api_key / llm_api_key are not set */
   api_key?: string;
-  /** LLM provider for Dream Cycle */
+  /** LLM provider for Dream Cycle (may differ from embedding_provider) */
   llm_provider?: string;
   /** LLM model override */
   llm_model?: string;
+  /** API key for LLM provider (takes precedence over api_key) */
+  llm_api_key?: string;
   /** Data directory for brain files */
   data_dir: string;
   /** Owner ID (for multi-user) */

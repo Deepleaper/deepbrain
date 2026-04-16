@@ -1,0 +1,6 @@
+{
+  "engine": "pglite",
+  "database": "C:\\Users\\mingjwan\\tmp-deepbrain-check\\.deepbrain-brains\\default\\data",
+  "embedding_provider": "gemini",
+  "data_dir": "C:\\Users\\mingjwan\\tmp-deepbrain-check\\.deepbrain-brains\\default\\brain"
+}
