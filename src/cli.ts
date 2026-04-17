@@ -53,6 +53,7 @@ import { syncNotion } from './sync/notion-sync.js';
 import { watchObsidianVault } from './sync/obsidian-watcher.js';
 import { findConnections, formatConnections } from './connections.js';
 import { backupBrain, restoreBrain } from './backup.js';
+import { AgentBrain } from './agent-brain.js';
 import { applyTemplate, listTemplates, TEMPLATES } from './templates.js';
 import { importGitHubRepo, importGitHubStars } from './import/github.js';
 import { importYouTube } from './import/youtube.js';
@@ -1716,6 +1717,57 @@ Platforms:
         webhookConfig,
       });
       console.log(`\n🧪 Open http://localhost:${portResult.value}/playground for the interactive demo\n`);
+      break;
+    }
+
+    case 'learn': {
+      const text = args.slice(1).join(' ');
+      if (!text) { console.error('Usage: deepbrain learn <text>'); break; }
+      const brain = await getBrain(brainName);
+      const agentBrain = new AgentBrain(brain);
+      const { slug } = await agentBrain.learn(text);
+      console.log(`✅ Learned → ${slug}`);
+      await brain.disconnect();
+      break;
+    }
+
+    case 'recall': {
+      const query = args.slice(1).join(' ');
+      if (!query) { console.error('Usage: deepbrain recall <query>'); break; }
+      const brain = await getBrain(brainName);
+      const agentBrain = new AgentBrain(brain);
+      const results = await agentBrain.recall(query);
+      if (results.length === 0) {
+        console.log('No memories found.');
+      } else {
+        console.log(`\n🧠 ${results.length} memories for "${query}"\n`);
+        for (const r of results) {
+          console.log(`  📄 ${r.slug} (${r.type}) - score: ${r.score.toFixed(4)}`);
+          console.log(`     ${r.chunk_text.slice(0, 120)}...\n`);
+        }
+      }
+      await brain.disconnect();
+      break;
+    }
+
+    case 'evolve': {
+      const dryRunResult = hasFlag(args, '--dry-run');
+      args = dryRunResult.args;
+      console.log('\n🧬 Running evolve cycle...\n');
+      const brain = await getBrain(brainName);
+      const agentBrain = new AgentBrain(brain);
+      const report = await agentBrain.evolve({ dryRun: dryRunResult.present });
+      console.log(`✅ Evolve complete`);
+      console.log(`   Traces processed: ${report.tracesProcessed}`);
+      console.log(`   Pages created: ${report.pagesCreated}`);
+      console.log(`   Pages updated: ${report.pagesUpdated}`);
+      console.log(`   Pages promoted: ${report.pagesPromoted}`);
+      if (report.errors.length > 0) {
+        console.log(`   Errors: ${report.errors.length}`);
+        report.errors.forEach(e => console.log(`     ⚠️ ${e}`));
+      }
+      if (dryRunResult.present) console.log('\n   (dry run - no changes made)');
+      await brain.disconnect();
       break;
     }
 
