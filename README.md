@@ -191,16 +191,173 @@ Apache-2.0 — 免费商用，欢迎贡献。
 
 ## English
 
-**DeepBrain** is an Agent Memory Engine that makes AI agents smarter over time.
+## 💡 What Is DeepBrain?
 
-Three core APIs: `learn()` (store experience), `recall()` (semantic retrieval), `evolve()` (consolidate knowledge).
+> **Not RAG. Not a knowledge base. DeepBrain is the brain for your AI Agent — it learns, remembers, and evolves.**
 
-Key differentiator: **evolve()** — knowledge gets refined, not just accumulated.
+The pain point with existing Agent frameworks: **every conversation starts from scratch**. The agent doesn't remember what it learned yesterday, doesn't remember last week's mistakes, and when someone else takes over, everything resets to zero.
 
-Features: Memory tiers (Core/Working/Archival), 24+ importers, 7 AI providers, MCP server, local-first (PGLite).
+DeepBrain solves this with three APIs:
+
+```
+brain.learn()   → Write experience into memory
+brain.recall()  → Retrieve relevant memories when needed
+brain.evolve()  → Periodically refine — knowledge gets sharper, not bigger
+```
+
+## 🎯 Competitive Comparison
+
+| | Mem0 | LangChain Memory | Letta | **DeepBrain** |
+|---|---|---|---|---|
+| Positioning | Memory storage | Conversation history | Stateful Agent | **Agent Memory Engine** |
+| Core capability | CRUD | Window management | State machine | **learn/recall/evolve** |
+| Knowledge refinement | ❌ | ❌ | ❌ | ✅ **Auto-evolve** |
+| Memory tiers | ❌ | ❌ | ✅ 3 tiers | ✅ **Core/Working/Archival** |
+| Framework lock-in | Standalone | LangChain | Letta | **Any framework** |
+| Local-first | Requires service | In-memory | Requires service | ✅ **PGLite, zero dependencies** |
+
+**In one line: others store memories; DeepBrain *refines* them.**
+
+## Quick Start
 
 ```bash
 npm install deepbrain
 ```
 
-Part of Deepleaper's open-source suite: [opc-agent](https://github.com/Deepleaper/opc-agent) · [agentkits](https://github.com/Deepleaper/agentkits) · [agent-workstation](https://github.com/Deepleaper/agent-workstation)
+```typescript
+import { Brain, AgentBrain } from 'deepbrain';
+
+// 1. Initialize the brain
+const brain = new Brain({ embedding_provider: 'openai' });
+await brain.connect();
+const agent = new AgentBrain(brain, 'my-sales-agent');
+
+// 2. Learn — automatically store after each interaction
+await agent.learn({
+  action: 'Customer asked about return policy',
+  result: '7-day no-questions-asked return, original packaging required',
+  context: { customer: 'VIP', channel: 'wechat' }
+});
+
+// 3. Recall — retrieve when needed
+const memories = await agent.recall('What did this customer ask before?');
+// → [{ text: 'Customer asked about return policy...', score: 0.92 }]
+
+// 4. Evolve — run periodically to refine knowledge
+const report = await agent.evolve();
+// → Distills 50 scattered experiences into 3 pieces of knowledge
+```
+
+## Core Concepts
+
+### Three APIs
+
+| API | What it does | When to call |
+|-----|-------------|-------------|
+| `learn()` | Store experience/knowledge | After each Agent task completion |
+| `recall()` | Semantic memory retrieval | When the Agent needs context |
+| `evolve()` | Refine + upgrade memories | Scheduled task (e.g., daily at midnight) |
+
+### Memory Tiers
+
+```
+Core     (≤20 items)  — Always in context, most important knowledge
+Working  (≤50 items)  — Currently active, frequently accessed memories
+Archival (unlimited)  — Long-term storage, retrieved on demand
+```
+
+High access frequency → auto-promoted. Long unused → auto-demoted.
+
+### Knowledge Evolution (evolve)
+
+This is DeepBrain's core differentiator:
+
+```
+Day 1:  50 scattered customer conversation records
+Day 7:  evolve() → Refined into 5 customer preference insights
+Day 30: evolve() → Further distilled into 2 core insights
+```
+
+**Knowledge gets sharper, not bigger.**
+
+### Memory Adapters
+
+DeepBrain is framework-agnostic. Connect via adapters:
+
+```typescript
+import { adapters } from 'deepbrain';
+
+// OpenClaw adapter
+const openclaw = adapters.openclaw;
+
+// Native adapter (any framework)
+const native = adapters.native;
+
+// More adapters in development: LangChain, CrewAI, AutoGen...
+```
+
+## Full Feature Set
+
+| Category | Features |
+|----------|----------|
+| 🧠 **Memory** | learn/recall/evolve trio, Memory Tiers with auto-promotion/demotion |
+| 🔍 **Search** | Vector semantic search + full-text search, hybrid ranking |
+| 🔄 **Maintenance** | evolve knowledge refinement, dream auto-maintenance cycle |
+| 🔌 **Adapters** | OpenClaw / Native adapter layer, extensible interface |
+| 📥 **Import** | 24+ importers (Markdown/Notion/Obsidian/Logseq/Readwise...) |
+| 🤖 **AI** | 7 providers (OpenAI/Gemini/DeepSeek/Qwen/GLM/Moonshot/Ollama) |
+| 🛠️ **Integration** | MCP Server, REST API, Web UI |
+| 💾 **Storage** | PGLite local zero-dependency, vector indexing |
+
+## CLI Commands
+
+```bash
+deepbrain learn "Customer prefers Monday morning meetings"  # Learn
+deepbrain recall "When does the customer have meetings?"     # Recall
+deepbrain evolve                                             # Knowledge evolution
+deepbrain query "return policy"                              # Semantic search
+deepbrain serve                                              # Web UI + API
+deepbrain import notion ./export                             # Import from Notion
+deepbrain dream                                              # Maintenance cycle
+deepbrain stats                                              # View statistics
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│         Your Agent Framework             │
+│   (OpenClaw / LangChain / Custom / ...) │
+├─────────────────────────────────────────┤
+│         Memory Adapters                  │
+│   (openclaw / langchain / native)        │
+├─────────────────────────────────────────┤
+│         AgentBrain API                   │
+│   learn() · recall() · evolve()          │
+├─────────────────────────────────────────┤
+│         Brain Engine                     │
+│   Vector Search · FTS · Knowledge Graph  │
+├─────────────────────────────────────────┤
+│         PGLite + Embeddings              │
+│   Local Storage · Zero Deps · Zero Cost  │
+└─────────────────────────────────────────┘
+```
+
+## 🔗 Ecosystem
+
+DeepBrain is part of Deepleaper's open-source suite of four:
+
+| Project | Role | Relationship |
+|---------|------|-------------|
+| **DeepBrain** | Agent Memory Engine | ← You are here |
+| [opc-agent](https://github.com/Deepleaper/opc-agent) | Agent OS | Traces → learn() |
+| [agentkits](https://github.com/Deepleaper/agentkits) | OpenRouter with Memory | Auto recall + learn |
+| [agent-workstation](https://github.com/Deepleaper/agent-workstation) | Virtual Role Templates | brain-seed.md → L1 |
+
+```
+opc-agent collects Traces → DeepBrain learns → agentkits auto-recalls during calls → Agents get smarter over time
+```
+
+## License
+
+Apache-2.0 — Free for commercial use. Contributions welcome.
