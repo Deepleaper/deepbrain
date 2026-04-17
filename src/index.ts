@@ -110,6 +110,14 @@ export type { ChatOptions, MultiBrainChatOptions } from './commands/chat.js';
 export { backupBrain, restoreBrain } from './backup.js';
 export type { BackupManifest, BackupResult, RestoreResult } from './backup.js';
 
+// Agent Brain API (v1.6)
+export { AgentBrain } from './agent-brain.js';
+export type { Trace, LearnOptions, RecallOptions, EvolveOptions, EvolveReport } from './agent-brain.js';
+
+// Memory Adapters (v1.6)
+export { OpenClawAdapter, NativeAdapter, adapters } from './adapters/index.js';
+export type { MemoryAdapter } from './adapters/index.js';
+
 // Brain Templates (v1.4)
 export { applyTemplate, listTemplates, TEMPLATES } from './templates.js';
 export type { BrainTemplate } from './templates.js';
