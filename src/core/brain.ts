@@ -45,7 +45,7 @@ export class Brain {
     }
 
     this.embedder = createEmbedding({
-      provider: this.config.embedding_provider as any,
+      provider: (this.config.embedding_provider || 'openai') as any,
       model: this.config.embedding_model,
       apiKey: this.config.embedding_api_key ?? this.config.api_key,
     });
