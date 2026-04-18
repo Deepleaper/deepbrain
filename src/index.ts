@@ -115,8 +115,8 @@ export { BrainUI } from './ui/server.js';
 export type { BrainUIConfig } from './ui/server.js';
 
 // Agent Brain API (v1.6)
-export { AgentBrain } from './agent-brain.js';
-export type { Trace, LearnOptions, RecallOptions, EvolveReport } from './agent-brain.js';
+export { AgentBrain, classifyInsight } from './agent-brain.js';
+export type { Trace, LearnOptions, RecallOptions, EvolveReport, InsightType, EvolveGovernanceOptions } from './agent-brain.js';
 
 // Evolve Engine (v1.7)
 export {
@@ -141,3 +141,23 @@ export type { DeepBrainClientConfig, SDKPage, SDKSearchResult, SDKChatResponse, 
 // RAG Pipeline (v2.0)
 export { DocumentParser, Chunker, Reranker, RAGPipeline } from './rag/index.js';
 export type { ParsedDocument, Chunk as RAGChunk, ChunkOptions, RankedResult, RAGOptions } from './rag/index.js';
+
+// Dynamic Schema (v2.1 - M★ paper)
+export { DynamicSchemaManager, WORKSTATION_SCHEMAS } from './core/dynamic-schema.js';
+export type { SchemaHint, WorkstationCategory } from './core/dynamic-schema.js';
+
+// Trace Analyzer (v2.1 - Trajectory-Informed + M★)
+export { TraceAnalyzer, feedTracesToBrain } from './core/trace-analyzer.js';
+export type { SpanData, TraceData, LearnableInsight } from './core/trace-analyzer.js';
+
+// Evolve Quality Gate (v2.1 - Memento-Skills paper)
+export { EvolveQualityGate } from './core/evolve-quality.js';
+export type { QualitySnapshot, QualityReport } from './core/evolve-quality.js';
+
+// Meta-Evolve (v2.1 - MemSkill + HyperAgents paper)
+export { MetaEvolver } from './core/meta-evolve.js';
+export type { MetaEvolveStrategy, MergeMethod, FailedCase } from './core/meta-evolve.js';
+
+// Knowledge Governance (v2.1 - SSGM paper)
+export { KnowledgeGovernor } from './core/knowledge-governance.js';
+export type { GovernancePolicy, PropagationRule, GovernanceLevel, FilterMode, AuditEntry } from './core/knowledge-governance.js';

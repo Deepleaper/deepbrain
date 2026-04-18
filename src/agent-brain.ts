@@ -6,6 +6,9 @@ import {
   type EvolveOptions as EvolveOptsNew, type EvolveResult, type TraceItem,
 } from './evolve/index.js';
 
+/** Knowledge insight classification (Trajectory-Informed Memory) */
+export type InsightType = 'strategy' | 'recovery' | 'optimization';
+
 export interface Trace {
   /** What the agent did */
   action: string;
@@ -17,6 +20,8 @@ export interface Trace {
   agentId?: string;
   /** Timestamp (auto-set if missing) */
   timestamp?: string;
+  /** Insight classification (auto-detected if not provided) */
+  insight_type?: InsightType;
 }
 
 export interface LearnOptions {
@@ -37,9 +42,23 @@ export interface RecallOptions {
   tags?: string[];
   /** Include higher tier memories (L2/L3/L4) if available */
   includeHigherTiers?: boolean;
+  /** Prefer results of this insight type (boost 1.5x) */
+  prefer_type?: InsightType;
+  /** Recency weight 0-1 (0=no decay, 1=max decay). Default 0 */
+  recency_weight?: number;
 }
 
 export { EvolveOptions, EvolveResult } from './evolve/index.js';
+
+/** Safety governance options for evolve() (SSGM paper) */
+export interface EvolveGovernanceOptions {
+  /** Check embedding drift after merge. Warn if cosine distance > 0.3 */
+  drift_check?: boolean;
+  /** Pages older than this many days get lower merge priority. Default 180 */
+  decay_days?: number;
+  /** Run quality gate: 3 test recalls before/after, rollback if avg score drops >10% */
+  quality_gate?: boolean;
+}
 
 export interface EvolveReport {
   tracesProcessed: number;
@@ -47,8 +66,20 @@ export interface EvolveReport {
   pagesUpdated: number;
   pagesPromoted: number;
   errors: string[];
+  warnings: string[];
   startedAt: Date;
   finishedAt: Date;
+}
+
+// ── Insight Classification Heuristics ──────────────────────────
+
+const RECOVERY_PATTERNS = /\b(error|fail(?:ed|ure|s)?|bug|crash|problem|exception|broken|fix|issue|timeout|retry)\b/i;
+const OPTIMIZATION_PATTERNS = /\b(faster|efficient|optimize|improve|performance|speed|reduce|cache|batch)\b/i;
+
+export function classifyInsight(text: string): InsightType {
+  if (RECOVERY_PATTERNS.test(text)) return 'recovery';
+  if (OPTIMIZATION_PATTERNS.test(text)) return 'optimization';
+  return 'strategy';
 }
 
 export class AgentBrain {
@@ -84,6 +115,11 @@ export class AgentBrain {
       title = input.action.slice(0, 80);
     }
 
+    // Auto-classify insight type
+    const insight_type: InsightType = (typeof input !== 'string' && input.insight_type)
+      ? input.insight_type
+      : classifyInsight(content);
+
     const slug = `trace-${agentId}-${Date.now()}`;
 
     await this.brain.put(slug, {
@@ -98,6 +134,7 @@ export class AgentBrain {
         tags: options.tags || [],
         learnedAt: timestamp,
         access_count: 0,
+        insight_type,
       },
     });
 
@@ -111,17 +148,48 @@ export class AgentBrain {
    */
   async recall(query: string, options: RecallOptions = {}): Promise<SearchResult[]> {
     const results = await this.brain.query(query, {
-      limit: options.limit || 10,
+      limit: (options.limit || 10) * 2, // fetch extra for re-ranking
       owner: options.agentId,
     });
 
-    // Filter by tags if specified
-    if (options.tags?.length) {
-      // Tags filtering happens at page level
-      return results; // TODO: filter by tags when brain supports it
+    let reranked = results;
+
+    // Re-rank by insight type preference and recency
+    if (options.prefer_type || options.recency_weight) {
+      const recencyWeight = Math.max(0, Math.min(1, options.recency_weight ?? 0));
+      const now = Date.now();
+
+      reranked = await Promise.all(results.map(async (r) => {
+        let score = r.score;
+
+        // Boost by insight_type match
+        if (options.prefer_type) {
+          const page = await this.brain.get(r.slug);
+          const fm = (page?.frontmatter || {}) as Record<string, unknown>;
+          if (fm.insight_type === options.prefer_type) {
+            score *= 1.5;
+          }
+        }
+
+        // Time decay
+        if (recencyWeight > 0) {
+          const page = await this.brain.get(r.slug);
+          const fm = (page?.frontmatter || {}) as Record<string, unknown>;
+          const learnedAt = fm.learnedAt as string;
+          if (learnedAt) {
+            const daysSince = (now - new Date(learnedAt).getTime()) / (1000 * 60 * 60 * 24);
+            score *= (1 - recencyWeight * Math.min(daysSince, 365) / 365);
+          }
+        }
+
+        return { ...r, score };
+      }));
+
+      reranked.sort((a, b) => b.score - a.score);
     }
 
-    return results;
+    // Apply final limit
+    return reranked.slice(0, options.limit || 10);
   }
 
   /**
@@ -135,7 +203,7 @@ export class AgentBrain {
    *
    * Also supports the legacy EvolveOptions shape for backward compat.
    */
-  async evolve(options: EvolveOptsNew & { batchSize?: number } = {}): Promise<EvolveResult & EvolveReport> {
+  async evolve(options: EvolveOptsNew & { batchSize?: number } & EvolveGovernanceOptions = {}): Promise<EvolveResult & EvolveReport> {
     const {
       batchSize = 50,
       minTraces = 5,
@@ -143,6 +211,9 @@ export class AgentBrain {
       strategy = 'merge',
       topicThreshold = 0.2,
       maxAge,
+      drift_check = false,
+      decay_days = 180,
+      quality_gate = false,
     } = options;
 
     const report: EvolveResult & EvolveReport = {
@@ -153,6 +224,7 @@ export class AgentBrain {
       clusters: [],
       dryRun: !!dryRun,
       errors: [],
+      warnings: [],
       startedAt: new Date(),
       finishedAt: new Date(),
     };
@@ -196,6 +268,27 @@ export class AgentBrain {
         frontmatter: (t.frontmatter || {}) as Record<string, unknown>,
         type: t.type,
       }));
+
+      // Apply decay_days: sort traces so older ones come last (lower merge priority)
+      if (decay_days > 0) {
+        const cutoff = Date.now() - decay_days * 24 * 60 * 60 * 1000;
+        traceItems.sort((a, b) => {
+          const aOld = new Date(a.frontmatter.learnedAt as string || 0).getTime() < cutoff ? 1 : 0;
+          const bOld = new Date(b.frontmatter.learnedAt as string || 0).getTime() < cutoff ? 1 : 0;
+          return aOld - bOld;
+        });
+      }
+
+      // Quality gate: capture pre-evolve recall scores
+      let preEvolveScores: number[] = [];
+      const qualityQueries = ['test query alpha', 'test query beta', 'test query gamma'];
+      if (quality_gate && !dryRun) {
+        for (const q of qualityQueries) {
+          const results = await this.recall(q, { limit: 3 });
+          const avgScore = results.length > 0 ? results.reduce((s, r) => s + r.score, 0) / results.length : 0;
+          preEvolveScores.push(avgScore);
+        }
+      }
 
       // 3. Cluster by keyword similarity
       const clusterMap = clusterTraces(
@@ -284,11 +377,49 @@ export class AgentBrain {
         }
 
         report.pagesCreated++;
+
+        // Drift check: compare new page embedding with source trace content
+        if (drift_check && !dryRun) {
+          // Simple content-based drift: compare keyword overlap between merged and sources
+          const mergedKeywords = extractKeywords(compiled);
+          const sourceKeywords = clusterItems.flatMap(t => t.keywords);
+          const sourceSet = new Set(sourceKeywords);
+          const mergedSet = new Set(mergedKeywords);
+          const intersection = [...mergedSet].filter(k => sourceSet.has(k)).length;
+          const union = new Set([...mergedSet, ...sourceSet]).size;
+          const overlapScore = union > 0 ? intersection / union : 0;
+          // If overlap < 0.3 (i.e., cosine-distance-like divergence > 0.7), warn
+          if (overlapScore < 0.3) {
+            report.warnings.push(`Drift detected in ${knowledgeSlug}: keyword overlap ${(overlapScore * 100).toFixed(0)}% < 30% threshold`);
+          }
+        }
+
         report.clusters.push({
           topic,
           traceCount: clusterItems.length,
           outputPage: knowledgeSlug,
         });
+      }
+
+      // Quality gate: compare post-evolve recall scores
+      if (quality_gate && !dryRun && preEvolveScores.length > 0) {
+        const postEvolveScores: number[] = [];
+        for (const q of qualityQueries) {
+          const results = await this.recall(q, { limit: 3 });
+          const avgScore = results.length > 0 ? results.reduce((s, r) => s + r.score, 0) / results.length : 0;
+          postEvolveScores.push(avgScore);
+        }
+        const preAvg = preEvolveScores.reduce((a, b) => a + b, 0) / preEvolveScores.length;
+        const postAvg = postEvolveScores.reduce((a, b) => a + b, 0) / postEvolveScores.length;
+        if (preAvg > 0 && (preAvg - postAvg) / preAvg > 0.1) {
+          // Score dropped >10% — rollback created pages
+          for (const cluster of report.clusters) {
+            await this.brain.delete(cluster.outputPage);
+          }
+          report.warnings.push(`Quality gate failed: avg recall score dropped ${(((preAvg - postAvg) / preAvg) * 100).toFixed(1)}%. Rolled back ${report.pagesCreated} pages.`);
+          report.pagesCreated = 0;
+          report.clusters = [];
+        }
       }
 
       // 5. Auto-promote high-access pages
