@@ -5,7 +5,7 @@
 **Agent 的大脑 — 会学习、会进化的知识引擎**
 
 [![npm version](https://img.shields.io/npm/v/deepbrain)](https://www.npmjs.com/package/deepbrain)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-LGPL_3.0-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 
 **不只是存储，是真正会进化的记忆系统。**
@@ -275,7 +275,14 @@ npm test
 
 ## License
 
-[Apache-2.0](LICENSE) — 免费商用，欢迎贡献。
+DeepBrain is dual-licensed:
+
+- **Open Source**: [LGPL-3.0](./LICENSE) — free for open-source and commercial use (modifications must be shared)
+- **Commercial**: [Contact us](mailto:licensing@deepleaper.com) for proprietary use without open-source obligations
+
+**Attribution Required**: All deployments must display "Powered by DeepBrain — Deepleaper (跃盟科技)" in a visible location. Attribution removal requires a commercial license.
+
+See [LICENSE-COMMERCIAL](./LICENSE-COMMERCIAL) for details.
 
 ---
 
@@ -546,4 +553,11 @@ npm test
 
 ## License
 
-[Apache-2.0](LICENSE) — Free for commercial use. Contributions welcome.
+DeepBrain is dual-licensed:
+
+- **Open Source**: [LGPL-3.0](./LICENSE) — free for open-source and commercial use (modifications must be shared)
+- **Commercial**: [Contact us](mailto:licensing@deepleaper.com) for proprietary use without open-source obligations
+
+**Attribution Required**: All deployments must display "Powered by DeepBrain — Deepleaper (跃盟科技)" in a visible location. Attribution removal requires a commercial license.
+
+See [LICENSE-COMMERCIAL](./LICENSE-COMMERCIAL) for details.
