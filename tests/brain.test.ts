@@ -7,7 +7,9 @@ import { Brain } from '../src/core/brain.js';
 // Use a temp directory for test database
 const TEST_DB = './test-deepbrain-data';
 
-describe('Brain', () => {
+const HAS_API_KEY = !!(process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY);
+
+describe.skipIf(!HAS_API_KEY)('Brain', () => {
   let brain: Brain;
 
   beforeAll(async () => {

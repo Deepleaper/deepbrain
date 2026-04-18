@@ -34,9 +34,15 @@ export class Brain {
   // ── Lifecycle ──────────────────────────────────────────────────
 
   async connect(): Promise<void> {
-    this.db = new PGlite(this.config.database, {
-      extensions: { vector },
-    });
+    try {
+      this.db = new PGlite(this.config.database, {
+        extensions: { vector },
+      });
+    } catch (err) {
+      throw new Error(
+        `DeepBrain: PGLite failed to initialize. If you're on Node 24+, please use Node 22 LTS. Error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
 
     this.embedder = createEmbedding({
       provider: this.config.embedding_provider as any,
@@ -296,6 +302,55 @@ export class Brain {
       timeline_entry_count: parseInt(timeline.rows[0].count),
       pages_by_type: Object.fromEntries(byType.rows.map(r => [r.type, parseInt(r.count)])),
     };
+  }
+
+  // ── Export / Import ─────────────────────────────────────────────
+
+  async export(): Promise<{ pages: Page[]; links: Link[]; timeline: TimelineEntry[] }> {
+    const pages = await this.db.query<Page>('SELECT * FROM pages ORDER BY slug');
+    const links = await this.db.query<Link>('SELECT * FROM links ORDER BY from_slug, to_slug');
+    const timeline = await this.db.query<TimelineEntry>('SELECT * FROM timeline_entries ORDER BY date DESC');
+    return { pages: pages.rows, links: links.rows, timeline: timeline.rows };
+  }
+
+  async import(data: { pages: Page[]; links?: Link[]; timeline?: TimelineEntry[] }): Promise<void> {
+    for (const page of data.pages) {
+      await this.db.query(
+        `INSERT INTO pages (slug, type, title, compiled_truth, timeline, frontmatter, owner, content_hash)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (slug) DO UPDATE SET
+           type = EXCLUDED.type, title = EXCLUDED.title,
+           compiled_truth = EXCLUDED.compiled_truth,
+           timeline = EXCLUDED.timeline,
+           frontmatter = EXCLUDED.frontmatter,
+           owner = EXCLUDED.owner,
+           content_hash = EXCLUDED.content_hash, updated_at = NOW()`,
+        [page.slug, page.type, page.title, page.compiled_truth, page.timeline ?? '',
+         typeof page.frontmatter === 'string' ? page.frontmatter : JSON.stringify(page.frontmatter ?? {}),
+         page.owner ?? this.config.owner, page.content_hash ?? ''],
+      );
+    }
+
+    if (data.links) {
+      for (const link of data.links) {
+        await this.db.query(
+          `INSERT INTO links (from_slug, to_slug, link_type, context)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (from_slug, to_slug) DO NOTHING`,
+          [link.from_slug, link.to_slug, link.link_type, link.context ?? ''],
+        );
+      }
+    }
+
+    if (data.timeline) {
+      for (const entry of data.timeline) {
+        await this.db.query(
+          `INSERT INTO timeline_entries (page_id, date, source, summary, detail)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [entry.page_id, entry.date, entry.source ?? '', entry.summary, entry.detail ?? ''],
+        );
+      }
+    }
   }
 
   // ── Batch Operations ────────────────────────────────────────────

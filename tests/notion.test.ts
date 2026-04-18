@@ -10,7 +10,9 @@ import { join } from 'node:path';
 const TEST_DB = './test-notion-import-data';
 const TEST_DIR = './test-notion-export';
 
-describe('Notion Importer', () => {
+const HAS_API_KEY = !!(process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY);
+
+describe.skipIf(!HAS_API_KEY)('Notion Importer', () => {
   let brain: Brain;
 
   beforeAll(async () => {

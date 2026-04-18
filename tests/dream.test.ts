@@ -7,7 +7,9 @@ import { dream } from '../src/dream/index.js';
 
 const TEST_DB = './test-dream-data';
 
-describe('Dream Cycle', () => {
+const HAS_API_KEY = !!(process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY);
+
+describe.skipIf(!HAS_API_KEY)('Dream Cycle', () => {
   let brain: Brain;
 
   beforeAll(async () => {

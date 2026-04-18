@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.0 (2026-04-18)
+- feat: `brain.export()` and `brain.import()` for backup/restore
+- feat: PGLite initialization error now gives clear Node version guidance
+- fix: tests skip gracefully when no API key is set (no more hard failures)
+- chore: version bump
+
 ## 1.8.2 (2026-04-17)
 - fix: AgentBrain export missing from dist
 - fix: build before publish

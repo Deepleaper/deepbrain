@@ -10,7 +10,9 @@ import { join } from 'node:path';
 const TEST_DB = './test-obsidian-import-data';
 const TEST_VAULT = './test-obsidian-vault';
 
-describe('Obsidian Importer', () => {
+const HAS_API_KEY = !!(process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY);
+
+describe.skipIf(!HAS_API_KEY)('Obsidian Importer', () => {
   let brain: Brain;
 
   beforeAll(async () => {
