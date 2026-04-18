@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepBrain Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--bg-card:#141414;--bg-hover:#1a1a1a;
+  --border:#262626;--text:#e5e5e5;--text-muted:#737373;
+  --accent:#3b82f6;--green:#22c55e;--red:#ef4444;--purple:#a855f7;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'SF Mono','Fira Code',monospace;--radius:8px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+a{color:var(--accent);text-decoration:none}
+button{font-family:var(--font);cursor:pointer}
+input,textarea,select{font-family:var(--font);background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+
+/* Sidebar */
+.sidebar{width:220px;background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);font-size:18px;font-weight:700}
+.sidebar-header span{color:var(--accent)}
+.nav{flex:1;overflow-y:auto;padding:8px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;color:var(--text-muted);font-size:14px;transition:all .15s}
+.nav-item:hover{background:var(--bg-hover);color:var(--text)}
+.nav-item.active{background:var(--accent);color:#fff}
+
+/* Main */
+.main{flex:1;overflow-y:auto;padding:24px}
+.main h2{font-size:22px;margin-bottom:16px}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card:hover{border-color:var(--accent)}
+.card h3{font-size:15px;margin-bottom:4px}
+.card .meta{font-size:12px;color:var(--text-muted)}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-card .num{font-size:28px;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:12px;color:var(--text-muted);margin-top:4px}
+
+/* Page list */
+.page-list{display:flex;flex-direction:column;gap:4px}
+.page-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;transition:background .15s}
+.page-item:hover{background:var(--bg-hover)}
+.page-item .slug{font-size:14px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.page-item .type-badge{font-size:11px;padding:2px 8px;border-radius:12px;background:var(--bg-hover);color:var(--text-muted)}
+
+/* Search */
+.search-bar{display:flex;gap:8px;margin-bottom:16px}
+.search-bar input{flex:1}
+.search-bar button{background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:var(--radius);font-size:14px}
+.search-bar button:hover{opacity:.9}
+.toggle-group{display:flex;gap:4px;margin-bottom:16px}
+.toggle-btn{padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius);background:none;color:var(--text-muted);font-size:13px}
+.toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.result-item{padding:12px;border-bottom:1px solid var(--border)}
+.result-item .score{font-size:12px;color:var(--green);font-family:var(--mono)}
+
+/* Editor */
+.editor-area{display:flex;flex-direction:column;gap:12px}
+.editor-meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.editor-meta input,.editor-meta select{font-size:13px}
+.editor-textarea{width:100%;min-height:400px;font-family:var(--mono);font-size:14px;line-height:1.6;resize:vertical;padding:12px}
+.editor-actions{display:flex;gap:8px}
+.btn{padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:14px}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* Tags */
+.tag-cloud{display:flex;flex-wrap:wrap;gap:8px}
+.tag-pill{padding:6px 14px;border-radius:16px;background:var(--bg-card);border:1px solid var(--border);font-size:13px;cursor:pointer;transition:all .15s}
+.tag-pill:hover{border-color:var(--accent);color:var(--accent)}
+.tag-pill .count{color:var(--text-muted);font-size:11px;margin-left:4px}
+
+/* Graph canvas */
+#graph-canvas{width:100%;height:calc(100vh - 120px);border:1px solid var(--border);border-radius:var(--radius);cursor:grab}
+
+/* Timeline */
+.tl-entry{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.tl-date{font-family:var(--mono);font-size:13px;color:var(--accent);min-width:100px}
+.tl-content{font-size:14px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;padding:10px 20px;border-radius:var(--radius);font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+
+/* Loading */
+.loading{text-align:center;padding:40px;color:var(--text-muted)}
+
+/* Create page modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;min-width:400px}
+.modal h3{margin-bottom:16px}
+.modal .form-group{margin-bottom:12px}
+.modal label{display:block;font-size:13px;color:var(--text-muted);margin-bottom:4px}
+.modal input,.modal select{width:100%}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-header">🧠 <span>DeepBrain</span></div>
+  <div class="nav" id="nav"></div>
+</div>
+<div class="main" id="main">
+  <div class="loading">Loading...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api';
+const NAV = [
+  {id:'overview',icon:'📊',label:'Overview'},
+  {id:'pages',icon:'📚',label:'Pages'},
+  {id:'search',icon:'🔍',label:'Search'},
+  {id:'editor',icon:'📝',label:'Editor'},
+  {id:'evolution',icon:'📈',label:'Evolution'},
+  {id:'tags',icon:'🏷️',label:'Tags'},
+  {id:'graph',icon:'🕸️',label:'Graph'},
+  {id:'timeline',icon:'⏰',label:'Timeline'},
+  {id:'dream',icon:'💤',label:'Dream'},
+];
+let currentPage = 'overview';
+let editSlug = null;
+
+// ── Utils ──────────────────────────────────────
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, {
+    headers: {'Content-Type': 'application/json'},
+    ...opts,
+  });
+  return r.json();
+}
+function $(id) { return document.getElementById(id); }
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function timeSince(d) {
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+// ── Nav ────────────────────────────────────────
+function renderNav() {
+  $('nav').innerHTML = NAV.map(n =>
+    `<div class="nav-item${n.id===currentPage?' active':''}" onclick="navigate('${n.id}')">${n.icon} ${n.label}</div>`
+  ).join('');
+}
+function navigate(page, data) {
+  currentPage = page;
+  if (data) editSlug = data;
+  renderNav();
+  renderPage();
+}
+
+// ── Pages ──────────────────────────────────────
+async function renderPage() {
+  const m = $('main');
+  m.innerHTML = '<div class="loading">Loading...</div>';
+
+  try {
+    switch(currentPage) {
+      case 'overview': return await renderOverview(m);
+      case 'pages': return await renderPages(m);
+      case 'search': return renderSearch(m);
+      case 'editor': return await renderEditor(m);
+      case 'evolution': return renderEvolution(m);
+      case 'tags': return await renderTags(m);
+      case 'graph': return await renderGraph(m);
+      case 'timeline': return await renderTimeline(m);
+      case 'dream': return renderDream(m);
+    }
+  } catch(e) {
+    m.innerHTML = `<div class="card"><h3>Error</h3><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+// ── Overview ───────────────────────────────────
+async function renderOverview(el) {
+  const [stats, pages] = await Promise.all([api('/stats'), api('/pages')]);
+  const recent = pages.slice(0, 8);
+  const types = stats.pages_by_type || {};
+
+  el.innerHTML = `
+    <h2>📊 Overview</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num">${stats.page_count}</div><div class="label">Pages</div></div>
+      <div class="stat-card"><div class="num">${stats.chunk_count}</div><div class="label">Chunks</div></div>
+      <div class="stat-card"><div class="num">${stats.embedded_count}</div><div class="label">Embedded</div></div>
+      <div class="stat-card"><div class="num">${stats.tag_count}</div><div class="label">Tags</div></div>
+      <div class="stat-card"><div class="num">${stats.link_count}</div><div class="label">Links</div></div>
+      <div class="stat-card"><div class="num">${stats.timeline_entry_count}</div><div class="label">Timeline</div></div>
+    </div>
+    <h3 style="margin-bottom:12px">Pages by Type</h3>
+    <div class="stats-grid" style="margin-bottom:24px">
+      ${Object.entries(types).map(([t,c]) => `<div class="stat-card"><div class="num">${c}</div><div class="label">${esc(t)}</div></div>`).join('')}
+    </div>
+    <h3 style="margin-bottom:12px">Recent Pages</h3>
+    <div class="page-list">
+      ${recent.map(p => `<div class="page-item" onclick="navigate('editor','${esc(p.slug)}')">
+        <span class="slug">${esc(p.title || p.slug)}</span>
+        <span class="type-badge">${esc(p.type)}</span>
+        <span class="meta">${timeSince(p.updated_at)}</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ── Pages ──────────────────────────────────────
+async function renderPages(el) {
+  const pages = await api('/pages');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h2 style="margin:0">📚 Pages</h2>
+      <button class="btn btn-primary" onclick="showCreateModal()">+ New Page</button>
+    </div>
+    <input id="page-filter" placeholder="Filter pages..." style="width:100%;margin-bottom:12px" oninput="filterPages()">
+    <div class="page-list" id="page-list">
+      ${pages.map(p => `<div class="page-item" data-slug="${esc(p.slug)}" onclick="navigate('editor','${esc(p.slug)}')">
+        <span class="slug">${esc(p.title || p.slug)}</span>
+        <span class="type-badge">${esc(p.type)}</span>
+        <span class="meta">${timeSince(p.updated_at)}</span>
+      </div>`).join('')}
+    </div>`;
+}
+function filterPages() {
+  const q = document.getElementById('page-filter').value.toLowerCase();
+  document.querySelectorAll('#page-list .page-item').forEach(el => {
+    el.style.display = el.dataset.slug.includes(q) ? '' : 'none';
+  });
+}
+function showCreateModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = e => { if(e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal">
+    <h3>Create New Page</h3>
+    <div class="form-group"><label>Slug</label><input id="new-slug" placeholder="my-page"></div>
+    <div class="form-group"><label>Title</label><input id="new-title" placeholder="My Page"></div>
+    <div class="form-group"><label>Type</label><select id="new-type"><option>note</option><option>trace</option><option>knowledge</option><option>reference</option></select></div>
+    <div class="editor-actions" style="margin-top:16px">
+      <button class="btn btn-primary" onclick="createPage()">Create</button>
+      <button class="btn" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+async function createPage() {
+  const slug = document.getElementById('new-slug').value.trim();
+  const title = document.getElementById('new-title').value.trim() || slug;
+  const type = document.getElementById('new-type').value;
+  if (!slug) return toast('Slug required');
+  await api('/pages/' + encodeURIComponent(slug), {
+    method: 'PUT',
+    body: JSON.stringify({ type, title, compiled_truth: '' }),
+  });
+  document.querySelector('.modal-overlay')?.remove();
+  toast('Page created');
+  editSlug = slug;
+  navigate('editor', slug);
+}
+
+// ── Search ─────────────────────────────────────
+function renderSearch(el) {
+  el.innerHTML = `
+    <h2>🔍 Search</h2>
+    <div class="toggle-group">
+      <button class="toggle-btn active" id="btn-semantic" onclick="setSearchMode('semantic')">Semantic</button>
+      <button class="toggle-btn" id="btn-keyword" onclick="setSearchMode('keyword')">Keyword</button>
+    </div>
+    <div class="search-bar">
+      <input id="search-input" placeholder="Search your brain..." onkeydown="if(event.key==='Enter')doSearch()">
+      <button onclick="doSearch()">Search</button>
+    </div>
+    <div id="search-results"></div>`;
+}
+let searchMode = 'semantic';
+function setSearchMode(m) {
+  searchMode = m;
+  document.getElementById('btn-semantic').className = 'toggle-btn' + (m==='semantic'?' active':'');
+  document.getElementById('btn-keyword').className = 'toggle-btn' + (m==='keyword'?' active':'');
+}
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  const el = document.getElementById('search-results');
+  el.innerHTML = '<div class="loading">Searching...</div>';
+  const endpoint = searchMode === 'semantic' ? '/search' : '/search/keyword';
+  const results = await api(endpoint + '?q=' + encodeURIComponent(q));
+  if (!results.length) {
+    el.innerHTML = '<div class="card">No results found.</div>';
+    return;
+  }
+  el.innerHTML = results.map(r => `
+    <div class="result-item card" style="cursor:pointer" onclick="navigate('editor','${esc(r.slug)}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>${esc(r.title || r.slug)}</h3>
+        <span class="score">${(r.score ?? 0).toFixed(4)}</span>
+      </div>
+      <div class="meta">${esc(r.type)} · ${esc(r.slug)}</div>
+      <p style="margin-top:8px;font-size:13px;color:var(--text-muted)">${esc((r.chunk_text||'').slice(0,200))}</p>
+    </div>`).join('');
+}
+
+// ── Editor ─────────────────────────────────────
+async function renderEditor(el) {
+  if (!editSlug) {
+    el.innerHTML = '<h2>📝 Editor</h2><div class="card">Select a page from Pages or Search to edit.</div>';
+    return;
+  }
+  const page = await api('/pages/' + encodeURIComponent(editSlug));
+  if (page.error) {
+    el.innerHTML = `<h2>📝 Editor</h2><div class="card">Page not found: ${esc(editSlug)}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <h2>📝 ${esc(page.title || page.slug)}</h2>
+    <div class="editor-area">
+      <div class="editor-meta">
+        <input id="ed-title" value="${esc(page.title||'')}" placeholder="Title" style="flex:1">
+        <select id="ed-type">${['note','trace','knowledge','reference'].map(t => `<option${t===page.type?' selected':''}>${t}</option>`).join('')}</select>
+        <span class="meta">Updated: ${timeSince(page.updated_at)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted)">Tags: ${(page.tags||[]).map(t => `<span class="tag-pill" style="display:inline-block;margin:2px" onclick="navigate('tags')">${esc(t)}</span>`).join(' ') || 'none'}</div>
+      <textarea class="editor-textarea" id="ed-content">${esc(page.compiled_truth||'')}</textarea>
+      ${page.timeline ? `<div class="card"><h3>Timeline</h3><pre style="font-size:13px;white-space:pre-wrap;color:var(--text-muted)">${esc(page.timeline)}</pre></div>` : ''}
+      <div class="editor-actions">
+        <button class="btn btn-primary" onclick="savePage()">Save</button>
+        <button class="btn btn-danger" onclick="deletePage()">Delete</button>
+        <button class="btn" onclick="navigate('pages')">Back</button>
+      </div>
+    </div>`;
+}
+async function savePage() {
+  const body = {
+    title: document.getElementById('ed-title').value,
+    type: document.getElementById('ed-type').value,
+    compiled_truth: document.getElementById('ed-content').value,
+  };
+  await api('/pages/' + encodeURIComponent(editSlug), { method: 'PUT', body: JSON.stringify(body) });
+  toast('Saved!');
+}
+async function deletePage() {
+  if (!confirm('Delete page "' + editSlug + '"?')) return;
+  await api('/pages/' + encodeURIComponent(editSlug), { method: 'DELETE' });
+  toast('Deleted');
+  editSlug = null;
+  navigate('pages');
+}
+
+// ── Evolution ──────────────────────────────────
+function renderEvolution(el) {
+  el.innerHTML = `
+    <h2>📈 Evolution</h2>
+    <div class="card">
+      <p>Trigger knowledge evolution to consolidate traces into permanent knowledge.</p>
+      <button class="btn btn-primary" style="margin-top:12px" onclick="triggerEvolve()">🧬 Run Evolve</button>
+    </div>
+    <div id="evolve-result"></div>`;
+}
+async function triggerEvolve() {
+  const el = document.getElementById('evolve-result');
+  el.innerHTML = '<div class="loading">Evolving...</div>';
+  try {
+    const r = await api('/evolve', { method: 'POST' });
+    if (r.error) throw new Error(r.error);
+    el.innerHTML = `<div class="card">
+      <h3>✅ Evolve Complete</h3>
+      <p>Traces processed: ${r.tracesProcessed ?? 0}</p>
+      <p>Pages created: ${r.pagesCreated ?? 0}</p>
+      <p>Pages updated: ${r.pagesUpdated ?? 0}</p>
+      ${(r.clusters||[]).map(c => `<p>📎 ${esc(c.topic)}: ${c.traceCount} traces → ${esc(c.outputPage||'')}</p>`).join('')}
+    </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="card" style="border-color:var(--red)"><h3>Error</h3><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+// ── Tags ───────────────────────────────────────
+async function renderTags(el) {
+  const tags = await api('/tags');
+  el.innerHTML = `
+    <h2>🏷️ Tags</h2>
+    <div class="tag-cloud">
+      ${tags.map(t => `<span class="tag-pill" onclick="searchByTag('${esc(t.tag)}')">${esc(t.tag)}<span class="count">${t.count}</span></span>`).join('')}
+    </div>
+    <div id="tag-pages" style="margin-top:24px"></div>`;
+}
+async function searchByTag(tag) {
+  const pages = await api('/pages');
+  const el = document.getElementById('tag-pages');
+  // Filter pages that have this tag (fetch tags for each)
+  el.innerHTML = '<div class="loading">Loading...</div>';
+  const matches = [];
+  for (const p of pages) {
+    try {
+      const d = await api('/pages/' + encodeURIComponent(p.slug));
+      if (d.tags && d.tags.includes(tag)) matches.push(p);
+    } catch {}
+  }
+  el.innerHTML = `<h3>Pages tagged "${esc(tag)}"</h3><div class="page-list">${matches.map(p =>
+    `<div class="page-item" onclick="navigate('editor','${esc(p.slug)}')"><span class="slug">${esc(p.title||p.slug)}</span></div>`
+  ).join('')}</div>`;
+}
+
+// ── Graph ──────────────────────────────────────
+async function renderGraph(el) {
+  el.innerHTML = '<h2>🕸️ Knowledge Graph</h2><canvas id="graph-canvas"></canvas>';
+  const data = await api('/graph');
+  if (!data.nodes?.length) {
+    el.innerHTML += '<div class="card" style="margin-top:12px">No pages or links to visualize.</div>';
+    return;
+  }
+  const canvas = document.getElementById('graph-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = window.innerHeight - 120;
+  canvas.width = W; canvas.height = H;
+
+  // Init nodes with random positions
+  const nodes = data.nodes.map((n,i) => ({
+    ...n, x: W/2 + (Math.random()-.5)*W*.6, y: H/2 + (Math.random()-.5)*H*.6, vx:0, vy:0
+  }));
+  const slugIdx = Object.fromEntries(nodes.map((n,i) => [n.slug, i]));
+  const edges = data.edges.filter(e => slugIdx[e.from] !== undefined && slugIdx[e.to] !== undefined);
+
+  // Colors by type
+  const typeColor = {note:'#3b82f6',trace:'#a855f7',knowledge:'#22c55e',reference:'#f59e0b'};
+
+  let dragging = null, offsetX = 0, offsetY = 0;
+
+  canvas.onmousedown = e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    for (const n of nodes) {
+      if (Math.hypot(n.x-mx, n.y-my) < 20) { dragging = n; offsetX = n.x-mx; offsetY = n.y-my; break; }
+    }
+  };
+  canvas.onmousemove = e => {
+    if (!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    dragging.x = e.clientX - rect.left + offsetX;
+    dragging.y = e.clientY - rect.top + offsetY;
+    dragging.vx = 0; dragging.vy = 0;
+  };
+  canvas.onmouseup = () => { dragging = null; };
+
+  function tick() {
+    // Force-directed: repulsion between all nodes
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i+1; j < nodes.length; j++) {
+        let dx = nodes[j].x - nodes[i].x, dy = nodes[j].y - nodes[i].y;
+        let d = Math.max(Math.hypot(dx,dy), 1);
+        let f = 800 / (d * d);
+        nodes[i].vx -= dx/d * f; nodes[i].vy -= dy/d * f;
+        nodes[j].vx += dx/d * f; nodes[j].vy += dy/d * f;
+      }
+    }
+    // Spring attraction for edges
+    for (const e of edges) {
+      const a = nodes[slugIdx[e.from]], b = nodes[slugIdx[e.to]];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d = Math.max(Math.hypot(dx,dy), 1);
+      let f = (d - 120) * 0.01;
+      a.vx += dx/d * f; a.vy += dy/d * f;
+      b.vx -= dx/d * f; b.vy -= dy/d * f;
+    }
+    // Center gravity
+    for (const n of nodes) {
+      n.vx += (W/2 - n.x) * 0.001;
+      n.vy += (H/2 - n.y) * 0.001;
+    }
+    // Apply velocity with damping
+    for (const n of nodes) {
+      if (n === dragging) continue;
+      n.vx *= 0.9; n.vy *= 0.9;
+      n.x += n.vx; n.y += n.vy;
+      n.x = Math.max(20, Math.min(W-20, n.x));
+      n.y = Math.max(20, Math.min(H-20, n.y));
+    }
+
+    // Draw
+    ctx.clearRect(0, 0, W, H);
+    // Edges
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    for (const e of edges) {
+      const a = nodes[slugIdx[e.from]], b = nodes[slugIdx[e.to]];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    // Nodes
+    for (const n of nodes) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 12, 0, Math.PI*2);
+      ctx.fillStyle = typeColor[n.type] || '#3b82f6';
+      ctx.fill();
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = '#e5e5e5'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText((n.title||n.slug).slice(0,16), n.x, n.y + 24);
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ── Timeline ───────────────────────────────────
+async function renderTimeline(el) {
+  const pages = await api('/pages');
+  el.innerHTML = '<h2>⏰ Timeline</h2><div id="tl-list" class="loading">Loading...</div>';
+  const allEntries = [];
+  for (const p of pages.slice(0, 50)) {
+    try {
+      const entries = await api('/timeline/' + encodeURIComponent(p.slug));
+      for (const e of entries) allEntries.push({ ...e, slug: p.slug, title: p.title });
+    } catch {}
+  }
+  allEntries.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const listEl = document.getElementById('tl-list');
+  if (!allEntries.length) {
+    listEl.innerHTML = '<div class="card">No timeline entries yet.</div>';
+    return;
+  }
+  listEl.className = '';
+  listEl.innerHTML = allEntries.map(e => `
+    <div class="tl-entry">
+      <div class="tl-date">${esc(e.date||'')}</div>
+      <div class="tl-content">
+        <strong style="cursor:pointer" onclick="navigate('editor','${esc(e.slug)}')">${esc(e.title||e.slug)}</strong>
+        <p style="margin-top:4px;color:var(--text-muted)">${esc(e.summary||'')}</p>
+      </div>
+    </div>`).join('');
+}
+
+// ── Dream ──────────────────────────────────────
+function renderDream(el) {
+  el.innerHTML = `
+    <h2>💤 Dream / Consolidation</h2>
+    <div class="card">
+      <p>The Dream cycle performs maintenance: refreshes stale embeddings, removes dead links, and finds orphaned pages.</p>
+      <p style="color:var(--text-muted);margin-top:8px">Use the CLI to run: <code style="background:var(--bg);padding:2px 6px;border-radius:4px">deepbrain dream</code></p>
+    </div>`;
+}
+
+// ── Init ───────────────────────────────────────
+renderNav();
+renderPage();
+</script>
+</body>
+</html>

@@ -1720,6 +1720,27 @@ Platforms:
       break;
     }
 
+    case 'ui': {
+      const portResult = extractFlag(args, '--port', '4001');
+      args = portResult.args;
+      const brain = await getBrain(brainName);
+      const { BrainUI } = await import('./ui/server.js');
+      const ui = new BrainUI({
+        port: parseInt(portResult.value),
+        brain,
+        staticDir: new URL('./ui', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1'),
+      });
+      await ui.start();
+      console.log('   Press Ctrl+C to stop.\n');
+      process.on('SIGINT', async () => {
+        await ui.stop();
+        await brain.disconnect();
+        process.exit(0);
+      });
+      await new Promise(() => {}); // Wait forever
+      break;
+    }
+
     case 'doctor': {
       const configFile = getConfigFile(brainName);
       const config = loadConfig(brainName);

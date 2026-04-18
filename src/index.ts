@@ -110,6 +110,10 @@ export type { ChatOptions, MultiBrainChatOptions } from './commands/chat.js';
 export { backupBrain, restoreBrain } from './backup.js';
 export type { BackupManifest, BackupResult, RestoreResult } from './backup.js';
 
+// UI Dashboard (v1.8)
+export { BrainUI } from './ui/server.js';
+export type { BrainUIConfig } from './ui/server.js';
+
 // Agent Brain API (v1.6)
 export { AgentBrain } from './agent-brain.js';
 export type { Trace, LearnOptions, RecallOptions, EvolveReport } from './agent-brain.js';
