@@ -4,7 +4,7 @@
 
 **Agent 的大脑 — 会学习、会进化的知识引擎**
 
-[![npm version](https://img.shields.io/badge/npm-v1.10.0-blue)](https://www.npmjs.com/package/deepbrain)
+[![npm version](https://img.shields.io/badge/npm-v1.11.0-blue)](https://www.npmjs.com/package/deepbrain)
 [![License](https://img.shields.io/badge/License-LGPL_3.0-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 

@@ -1,6 +1,6 @@
 {
   "name": "deepbrain",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "你的个人 AI 知识大脑 | Personal AI brain. Store, search, and grow your knowledge.",
   "type": "module",
   "main": "dist/index.js",
