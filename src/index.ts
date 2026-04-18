@@ -112,7 +112,15 @@ export type { BackupManifest, BackupResult, RestoreResult } from './backup.js';
 
 // Agent Brain API (v1.6)
 export { AgentBrain } from './agent-brain.js';
-export type { Trace, LearnOptions, RecallOptions, EvolveOptions, EvolveReport } from './agent-brain.js';
+export type { Trace, LearnOptions, RecallOptions, EvolveReport } from './agent-brain.js';
+
+// Evolve Engine (v1.7)
+export {
+  extractKeywords, similarity, clusterTraces, dedupSentences,
+  consolidateMerge, consolidateSummarize, consolidateExtract,
+  AutoEvolveScheduler,
+} from './evolve/index.js';
+export type { EvolveOptions, EvolveResult, TraceItem } from './evolve/index.js';
 
 // Memory Adapters (v1.6)
 export { OpenClawAdapter, NativeAdapter, adapters } from './adapters/index.js';

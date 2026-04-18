@@ -1,5 +1,10 @@
 import type { Brain } from './core/brain.js';
 import type { SearchResult } from './core/types.js';
+import {
+  extractKeywords, similarity, clusterTraces, dedupSentences,
+  consolidateMerge, consolidateSummarize, consolidateExtract,
+  type EvolveOptions as EvolveOptsNew, type EvolveResult, type TraceItem,
+} from './evolve/index.js';
 
 export interface Trace {
   /** What the agent did */
@@ -34,14 +39,7 @@ export interface RecallOptions {
   includeHigherTiers?: boolean;
 }
 
-export interface EvolveOptions {
-  /** Max traces to process per cycle */
-  batchSize?: number;
-  /** Min traces before triggering consolidation */
-  minTraces?: number;
-  /** Dry run (report what would change without changing) */
-  dryRun?: boolean;
-}
+export { EvolveOptions, EvolveResult } from './evolve/index.js';
 
 export interface EvolveReport {
   tracesProcessed: number;
@@ -127,39 +125,60 @@ export class AgentBrain {
   }
 
   /**
-   * evolve() - Consolidate traces into refined knowledge.
+   * evolve() - Real algorithmic knowledge consolidation.
    *
-   * Actual knowledge consolidation:
-   * 1. Find traces that haven't been consolidated
-   * 2. Group related traces by semantic similarity
-   * 3. Create consolidated knowledge pages from groups
-   * 4. Track lineage (which traces contributed)
-   * 5. Promote frequently-accessed knowledge to higher tiers
+   * 1. Gather unprocessed traces
+   * 2. Extract keywords & cluster by Jaccard similarity
+   * 3. Consolidate each cluster using chosen strategy (merge/summarize/extract)
+   * 4. Mark traces as evolved
+   * 5. Return detailed stats
+   *
+   * Also supports the legacy EvolveOptions shape for backward compat.
    */
-  async evolve(options: EvolveOptions = {}): Promise<EvolveReport> {
-    const { batchSize = 50, minTraces = 3, dryRun = false } = options;
+  async evolve(options: EvolveOptsNew & { batchSize?: number } = {}): Promise<EvolveResult & EvolveReport> {
+    const {
+      batchSize = 50,
+      minTraces = 5,
+      dryRun = false,
+      strategy = 'merge',
+      topicThreshold = 0.2,
+      maxAge,
+    } = options;
 
-    const report: EvolveReport = {
+    const report: EvolveResult & EvolveReport = {
       tracesProcessed: 0,
       pagesCreated: 0,
       pagesUpdated: 0,
       pagesPromoted: 0,
+      clusters: [],
+      dryRun: !!dryRun,
       errors: [],
       startedAt: new Date(),
       finishedAt: new Date(),
     };
 
     try {
-      // 1. Find unprocessed traces (not yet evolved)
+      // 1. Find unprocessed traces
       const allTraces = await this.brain.list({
         type: 'trace',
         limit: batchSize,
       });
 
-      const traces = allTraces.filter(t => {
+      let traces = allTraces.filter(t => {
         const fm = (t.frontmatter || {}) as Record<string, unknown>;
         return !fm.evolved;
       });
+
+      // Filter by maxAge if specified
+      if (maxAge !== undefined) {
+        const cutoff = Date.now() - maxAge * 24 * 60 * 60 * 1000;
+        traces = traces.filter(t => {
+          const fm = (t.frontmatter || {}) as Record<string, unknown>;
+          const learnedAt = fm.learnedAt as string;
+          if (!learnedAt) return true;
+          return new Date(learnedAt).getTime() <= cutoff;
+        });
+      }
 
       report.tracesProcessed = traces.length;
 
@@ -168,84 +187,112 @@ export class AgentBrain {
         return report;
       }
 
-      if (!dryRun) {
-        // 2. Group related traces by semantic similarity
-        const groups = await this.groupRelatedTraces(traces);
+      // 2. Extract keywords for each trace
+      const traceItems: TraceItem[] = traces.map(t => ({
+        slug: t.slug,
+        title: t.title || '',
+        content: t.compiled_truth || t.title || '',
+        keywords: extractKeywords((t.compiled_truth || '') + ' ' + (t.title || '')),
+        frontmatter: (t.frontmatter || {}) as Record<string, unknown>,
+        type: t.type,
+      }));
 
-        // 3. Create consolidated knowledge pages from each group
-        for (const group of groups) {
-          if (group.length < 2) {
-            // Single trace — just mark as evolved, don't consolidate
-            const trace = group[0];
-            const fm = (trace.frontmatter || {}) as Record<string, unknown>;
-            await this.brain.put(trace.slug, {
-              type: trace.type,
-              title: trace.title,
-              compiled_truth: trace.compiled_truth || '',
-              frontmatter: { ...fm, evolved: true, evolvedAt: new Date().toISOString() },
+      // 3. Cluster by keyword similarity
+      const clusterMap = clusterTraces(
+        traceItems.map(t => ({ slug: t.slug, keywords: t.keywords })),
+        topicThreshold,
+      );
+
+      // 4. Consolidate each cluster
+      for (const [_centroid, slugs] of clusterMap) {
+        const clusterItems = slugs.map(s => traceItems.find(t => t.slug === s)!).filter(Boolean);
+
+        if (clusterItems.length < 2) {
+          // Single trace — mark evolved but don't create knowledge page
+          if (!dryRun) {
+            const item = clusterItems[0];
+            const page = traces.find(t => t.slug === item.slug)!;
+            await this.brain.put(page.slug, {
+              type: page.type,
+              title: page.title,
+              compiled_truth: page.compiled_truth || '',
+              frontmatter: { ...item.frontmatter, evolved: true, evolvedAt: new Date().toISOString() },
             });
-            continue;
           }
+          continue;
+        }
 
-          try {
-            // Create consolidated knowledge page
-            const slugSuffix = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-            const knowledgeSlug = `knowledge-${this.defaultAgentId}-${slugSuffix}`;
+        // Pick consolidation strategy
+        let compiled: string;
+        switch (strategy) {
+          case 'summarize':
+            compiled = consolidateSummarize(clusterItems);
+            break;
+          case 'extract':
+            compiled = consolidateExtract(clusterItems);
+            break;
+          case 'merge':
+          default:
+            compiled = consolidateMerge(clusterItems);
+            break;
+        }
 
-            // Build compiled_truth from all traces in the group
-            const traceContents = group.map(t => t.compiled_truth || t.title || '').filter(Boolean);
-            const traceSlugs = group.map(t => t.slug);
-            const traceTitles = group.map(t => t.title).filter(Boolean);
+        const topic = clusterItems[0].keywords.slice(0, 3).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' / ') || 'General';
+        const slugSuffix = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        const knowledgeSlug = `knowledge-${this.defaultAgentId}-${slugSuffix}`;
 
-            // Auto-summarize: create a compiled truth that merges the traces
-            const summary = this.summarizeTraces(traceTitles, traceContents);
+        // Collect all tags
+        const allTags = new Set<string>();
+        for (const item of clusterItems) {
+          const tags = (item.frontmatter.tags as string[]) || [];
+          tags.forEach(tag => allTags.add(tag));
+        }
 
-            // Collect all tags from contributing traces
-            const allTags = new Set<string>();
-            for (const t of group) {
-              const fm = (t.frontmatter || {}) as Record<string, unknown>;
-              const tags = (fm.tags as string[]) || [];
-              tags.forEach(tag => allTags.add(tag));
-            }
+        if (!dryRun) {
+          await this.brain.put(knowledgeSlug, {
+            type: 'knowledge',
+            title: `Consolidated: ${topic}`,
+            compiled_truth: compiled,
+            frontmatter: {
+              tier: 'working',
+              source: 'evolve',
+              strategy,
+              agentId: this.defaultAgentId,
+              tags: Array.from(allTags),
+              sourceTraces: slugs,
+              traceCount: clusterItems.length,
+              consolidatedAt: new Date().toISOString(),
+              access_count: 0,
+            },
+          });
 
-            await this.brain.put(knowledgeSlug, {
-              type: 'knowledge',
-              title: `Consolidated: ${traceTitles[0] || 'traces'}`,
-              compiled_truth: summary,
+          // Mark source traces as evolved
+          for (const item of clusterItems) {
+            const page = traces.find(t => t.slug === item.slug)!;
+            await this.brain.put(page.slug, {
+              type: page.type,
+              title: page.title,
+              compiled_truth: page.compiled_truth || '',
               frontmatter: {
-                tier: 'working',
-                source: 'evolve',
-                agentId: this.defaultAgentId,
-                tags: Array.from(allTags),
-                sourceTraces: traceSlugs,
-                traceCount: group.length,
-                consolidatedAt: new Date().toISOString(),
-                access_count: 0,
+                ...item.frontmatter,
+                evolved: true,
+                evolvedAt: new Date().toISOString(),
+                consolidatedInto: knowledgeSlug,
               },
             });
-            report.pagesCreated++;
-
-            // Mark all source traces as evolved with lineage reference
-            for (const trace of group) {
-              const fm = (trace.frontmatter || {}) as Record<string, unknown>;
-              await this.brain.put(trace.slug, {
-                type: trace.type,
-                title: trace.title,
-                compiled_truth: trace.compiled_truth || '',
-                frontmatter: {
-                  ...fm,
-                  evolved: true,
-                  evolvedAt: new Date().toISOString(),
-                  consolidatedInto: knowledgeSlug,
-                },
-              });
-            }
-          } catch (err) {
-            report.errors.push(`Group consolidation error: ${String(err)}`);
           }
         }
 
-        // 4. Auto-promote high-access pages
+        report.pagesCreated++;
+        report.clusters.push({
+          topic,
+          traceCount: clusterItems.length,
+          outputPage: knowledgeSlug,
+        });
+      }
+
+      // 5. Auto-promote high-access pages
+      if (!dryRun) {
         const allPages = await this.brain.list({ limit: 1000 });
         for (const page of allPages) {
           const fm = (page.frontmatter || {}) as Record<string, unknown>;
@@ -290,75 +337,6 @@ export class AgentBrain {
     const { dream } = await import('./dream/index.js');
     const dreamReport = await dream(this.brain);
     return { evolveReport, dreamReport };
-  }
-
-  /**
-   * Group related traces by semantic similarity using the brain's query() method.
-   * Uses a simple greedy clustering: for each unassigned trace, find similar ones.
-   */
-  private async groupRelatedTraces(traces: import('./core/types.js').Page[]): Promise<import('./core/types.js').Page[][]> {
-    const groups: import('./core/types.js').Page[][] = [];
-    const assigned = new Set<string>();
-
-    for (const trace of traces) {
-      if (assigned.has(trace.slug)) continue;
-
-      const group: import('./core/types.js').Page[] = [trace];
-      assigned.add(trace.slug);
-
-      // Use the trace's content to find similar traces
-      const queryText = trace.compiled_truth || trace.title || '';
-      if (!queryText) continue;
-
-      try {
-        const similar = await this.brain.query(queryText, { limit: 10 });
-
-        for (const result of similar) {
-          // Only group with other unassigned traces
-          if (assigned.has(result.slug)) continue;
-          if (result.type !== 'trace') continue;
-          // Similarity threshold: score > 0.5 indicates meaningful relation
-          if (result.score < 0.5) continue;
-
-          // Find the matching trace object
-          const matchingTrace = traces.find(t => t.slug === result.slug);
-          if (matchingTrace) {
-            group.push(matchingTrace);
-            assigned.add(result.slug);
-          }
-        }
-      } catch {
-        // If query fails, just keep the single-trace group
-      }
-
-      groups.push(group);
-    }
-
-    return groups;
-  }
-
-  /**
-   * Summarize a group of traces into a consolidated compiled_truth.
-   */
-  private summarizeTraces(titles: string[], contents: string[]): string {
-    const sections: string[] = [];
-
-    sections.push(`# Consolidated Knowledge`);
-    sections.push('');
-    sections.push(`> Auto-consolidated from ${contents.length} related traces.`);
-    sections.push('');
-
-    // Deduplicate and merge content
-    const uniqueContents = [...new Set(contents)];
-    for (let i = 0; i < uniqueContents.length; i++) {
-      const title = titles[i] || `Trace ${i + 1}`;
-      sections.push(`## ${title}`);
-      sections.push('');
-      sections.push(uniqueContents[i]);
-      sections.push('');
-    }
-
-    return sections.join('\n');
   }
 
   /** Get the underlying Brain instance */

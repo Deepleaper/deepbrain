@@ -793,6 +793,32 @@ async function main() {
       break;
     }
 
+    case 'evolve': {
+      const brain = await getBrain(brainName);
+      const { AgentBrain } = await import('./agent-brain.js');
+      const agentBrain = new AgentBrain(brain, 'cli');
+      const dryRun = args.includes('--dry-run');
+      const strategyIdx = args.indexOf('--strategy');
+      const strategy = strategyIdx >= 0 ? (args[strategyIdx + 1] as 'merge' | 'summarize' | 'extract') : 'merge';
+      const minIdx = args.indexOf('--min-traces');
+      const minTraces = minIdx >= 0 ? parseInt(args[minIdx + 1], 10) : 5;
+      const threshIdx = args.indexOf('--threshold');
+      const topicThreshold = threshIdx >= 0 ? parseFloat(args[threshIdx + 1]) : 0.2;
+
+      console.log(`\n🧬 Evolving knowledge (strategy=${strategy}, minTraces=${minTraces}, dryRun=${dryRun})...\n`);
+      const result = await agentBrain.evolve({ strategy, minTraces, dryRun, topicThreshold });
+      console.log(`✅ Evolve complete`);
+      console.log(`   Traces processed: ${result.tracesProcessed}`);
+      console.log(`   Pages created: ${result.pagesCreated}`);
+      console.log(`   Clusters: ${result.clusters.length}`);
+      for (const c of result.clusters) {
+        console.log(`     📚 ${c.topic}: ${c.traceCount} traces → ${c.outputPage}`);
+      }
+      if (dryRun) console.log(`   (dry run — no changes written)`);
+      await brain.disconnect();
+      break;
+    }
+
     // ── New v0.9.0 Commands ──────────────────────────────────────
 
     case 'op': {

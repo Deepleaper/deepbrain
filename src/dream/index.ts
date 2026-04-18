@@ -13,6 +13,8 @@
  */
 
 import type { Brain } from '../core/brain.js';
+import { AgentBrain } from '../agent-brain.js';
+import type { EvolveResult } from '../evolve/index.js';
 
 export interface DreamReport {
   started_at: Date;
@@ -20,6 +22,7 @@ export interface DreamReport {
   stale_refreshed: number;
   orphans_found: number;
   dead_links_removed: number;
+  evolve?: EvolveResult;
   errors: string[];
 }
 
@@ -45,6 +48,7 @@ export async function dream(brain: Brain, config: DreamConfig = {}): Promise<Dre
     stale_refreshed: 0,
     orphans_found: 0,
     dead_links_removed: 0,
+    evolve: undefined,
     errors: [],
   };
 
@@ -69,7 +73,19 @@ export async function dream(brain: Brain, config: DreamConfig = {}): Promise<Dre
       }
     }
 
-    // 2. Stats
+    // 2. Knowledge Consolidation via evolve()
+    try {
+      const agentBrain = new AgentBrain(brain, 'dream');
+      const evolveResult = await agentBrain.evolve({ minTraces: 3, strategy: 'merge' });
+      report.evolve = evolveResult;
+      if (evolveResult.tracesProcessed > 0) {
+        console.log(`\n🧬 Evolved ${evolveResult.tracesProcessed} traces → ${evolveResult.pagesCreated} knowledge pages`);
+      }
+    } catch (e: any) {
+      report.errors.push(`Evolve error: ${e.message}`);
+    }
+
+    // 3. Stats
     if (tasks.includes('stats')) {
       const stats = await brain.stats();
       console.log('\n🧠 DeepBrain Health Report');
