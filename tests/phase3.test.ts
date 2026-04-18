@@ -21,9 +21,12 @@ import { KnowledgeGovernor, stripPII, anonymize, summarize } from '../src/core/k
 import type { GovernancePolicy, PropagationRule } from '../src/core/knowledge-governance.js';
 import type { Page } from '../src/core/types.js';
 
-const TEST_BASE = join(tmpdir(), 'deepbrain-test-phase3-' + Date.now());
 let dbCounter = 0;
-function tmpDb() { return join(TEST_BASE, `db-${dbCounter++}`); }
+function tmpDb() {
+  const dir = join(tmpdir(), `deepbrain-test-phase3-${Date.now()}-${dbCounter++}`);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
 
 // ── Meta-Evolve Tests ────────────────────────────────────────────
 
@@ -32,7 +35,6 @@ describe('MetaEvolver', () => {
   let evolver: MetaEvolver;
 
   beforeAll(async () => {
-    mkdirSync(TEST_BASE, { recursive: true });
     brain = new Brain({ database: tmpDb() });
     await brain.connect();
     evolver = new MetaEvolver(brain);
@@ -40,7 +42,6 @@ describe('MetaEvolver', () => {
 
   afterAll(async () => {
     await brain.disconnect();
-    rmSync(TEST_BASE, { recursive: true, force: true });
   });
 
   it('should load default strategies when none exist', async () => {
