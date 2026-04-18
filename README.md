@@ -146,18 +146,22 @@ await evolver.evolveUp('job', 'industry');
 | 💾 | **PGLite 内嵌** | 零配置，无需外部数据库，开箱即用 |
 | 📦 | **MCP Server** | 可被 Claude / Cursor 等 AI 工具直接调用 |
 
-### 🎯 和竞品的区别
+### 🎯 与相关项目对比
 
 | | Mem0 | LangChain Memory | Letta | **DeepBrain** |
 |---|---|---|---|---|
-| 定位 | 记忆存储 | 对话历史 | 有状态 Agent | **Agent 知识引擎** |
-| 核心能力 | CRUD | 窗口管理 | 状态机 | **learn / recall / evolve** |
-| 知识提炼 | ❌ | ❌ | ❌ | ✅ **自动进化** |
-| 记忆分层 | ❌ | ❌ | ✅ 3 层 | ✅ **Core / Working / Archival** |
-| 本地运行 | 需要服务 | 内存 | 需要服务 | ✅ **PGLite 零依赖** |
-| 框架绑定 | 独立 | LangChain | Letta | **任意框架** |
+| 定位 | Agent 记忆平台 | 对话记忆模块 | 有状态 Agent 框架 | Agent 知识引擎 |
+| 核心能力 | 记忆提取、语义搜索、图谱记忆 | 多种记忆类型（Buffer / Summary / Entity / Knowledge Graph） | 持久记忆、自编辑记忆、工具调用 | learn / recall / evolve 闭环 |
+| 知识提炼 | ⚠️ 有记忆提取与整合 | ⚠️ Summary Memory 可压缩 | ⚠️ 可自编辑记忆 | ✅ 自动 evolve 聚类提炼 |
+| 记忆分层 | ⚠️ 短期/长期 | ⚠️ 多种类型可组合 | ✅ Core / Recall / Archival | ✅ Core / Working / Archival |
+| 本地运行 | ⚠️ 有本地模式，完整功能需服务端 | ✅ 内存运行 | ⚠️ 需要服务端 | ✅ PGLite 内嵌，零外部依赖 |
+| 框架绑定 | 独立 | LangChain 生态 | Letta 生态 | 任意框架 |
+| 社区与生态 | ✅ 活跃社区，多语言 SDK | ✅ LangChain 大生态 | ✅ 活跃社区 | 早期项目 |
+| 多租户 | ✅ | ⚠️ 需自行实现 | ⚠️ 需自行实现 | ⚠️ 需自行实现 |
 
-**一句话：别人管存，DeepBrain 管"炼"。**
+DeepBrain 的特色是 learn → recall → evolve 知识闭环和 PGLite 零配置本地运行。
+
+> 对比基于各项目公开文档（截至 2026 年 4 月），如有偏差欢迎 [Issue 指正](https://github.com/Deepleaper/deepbrain/issues)。
 
 ## API 参考
 
@@ -470,18 +474,22 @@ await evolver.evolveUp('job', 'industry');
 | 💾 | **Embedded PGLite** | Zero config, no external database required |
 | 📦 | **MCP Server** | Callable by Claude, Cursor, and other AI tools |
 
-### Competitive Comparison
+### Comparison with Related Projects
 
 | | Mem0 | LangChain Memory | Letta | **DeepBrain** |
 |---|---|---|---|---|
-| Positioning | Memory storage | Conversation history | Stateful Agent | **Agent Knowledge Engine** |
-| Core capability | CRUD | Window management | State machine | **learn / recall / evolve** |
-| Knowledge refinement | ❌ | ❌ | ❌ | ✅ **Auto-evolve** |
-| Memory tiers | ❌ | ❌ | ✅ 3 tiers | ✅ **Core / Working / Archival** |
-| Local-first | Requires service | In-memory | Requires service | ✅ **PGLite, zero deps** |
-| Framework lock-in | Standalone | LangChain | Letta | **Any framework** |
+| Positioning | Agent memory platform | Conversation memory module | Stateful Agent framework | Agent Knowledge Engine |
+| Core capability | Memory extraction, semantic search, graph memory | Multiple memory types (Buffer / Summary / Entity / Knowledge Graph) | Persistent memory, self-editing memory, tool use | learn / recall / evolve loop |
+| Knowledge refinement | ⚠️ Memory extraction & consolidation | ⚠️ Summary Memory compresses | ⚠️ Self-editing memory | ✅ Auto-evolve with clustering |
+| Memory tiers | ⚠️ Short-term / long-term | ⚠️ Multiple composable types | ✅ Core / Recall / Archival | ✅ Core / Working / Archival |
+| Local-first | ⚠️ Local mode available, full features need server | ✅ In-memory | ⚠️ Requires server | ✅ PGLite embedded, zero external deps |
+| Framework lock-in | Standalone | LangChain ecosystem | Letta ecosystem | Any framework |
+| Community & ecosystem | ✅ Active community, multi-language SDKs | ✅ Large LangChain ecosystem | ✅ Active community | Early-stage project |
+| Multi-tenant | ✅ | ⚠️ DIY | ⚠️ DIY | ⚠️ DIY |
 
-**In one line: others store memories; DeepBrain *refines* them.**
+DeepBrain's differentiator is the learn → recall → evolve knowledge loop and zero-config local execution via PGLite.
+
+> Comparison based on each project's public documentation as of April 2026. Corrections welcome via [Issues](https://github.com/Deepleaper/deepbrain/issues).
 
 ## API Reference
 
