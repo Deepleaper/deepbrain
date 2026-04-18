@@ -319,8 +319,8 @@ export async function interactiveChat(
       const lastAssistant = [...session.messages].reverse().find(m => m.role === 'assistant');
       if (lastUser && lastAssistant) {
         session.bookmarks.push({
-          question: lastUser.content,
-          answer: lastAssistant.content,
+          question: typeof lastUser.content === 'string' ? lastUser.content : JSON.stringify(lastUser.content),
+          answer: typeof lastAssistant.content === 'string' ? lastAssistant.content : JSON.stringify(lastAssistant.content),
           timestamp: new Date().toISOString(),
         });
         saveSession(session);

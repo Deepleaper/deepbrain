@@ -1,6 +1,6 @@
 {
   "name": "deepbrain",
-  "version": "1.11.1",
+  "version": "1.11.2",
   "description": "你的个人 AI 知识大脑 | Personal AI brain. Store, search, and grow your knowledge.",
   "type": "module",
   "main": "dist/index.js",
@@ -117,7 +117,7 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.2.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "agentkits": "^0.2.0"
+    "agentkits": "^1.10.1"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
