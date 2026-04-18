@@ -137,3 +137,7 @@ export type { BrainTemplate } from './templates.js';
 // API Client SDK (v1.4)
 export { DeepBrainClient } from './sdk.js';
 export type { DeepBrainClientConfig, SDKPage, SDKSearchResult, SDKChatResponse, SDKStats } from './sdk.js';
+
+// RAG Pipeline (v2.0)
+export { DocumentParser, Chunker, Reranker, RAGPipeline } from './rag/index.js';
+export type { ParsedDocument, Chunk as RAGChunk, ChunkOptions, RankedResult, RAGOptions } from './rag/index.js';

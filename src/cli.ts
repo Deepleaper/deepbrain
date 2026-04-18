@@ -1818,6 +1818,55 @@ Platforms:
       break;
     }
 
+    // 🆕 RAG Pipeline Commands ────────────────────────────────
+
+    case 'ingest': {
+      const file = args[1];
+      if (!file) { console.error('Usage: deepbrain ingest <file> [--slug name] [--strategy recursive] [--chunk-size 500]'); break; }
+
+      const slugResult = extractFlag(args, '--slug', '');
+      args = slugResult.args;
+      const strategyResult = extractFlag(args, '--strategy', 'recursive');
+      args = strategyResult.args;
+      const chunkSizeResult = extractFlag(args, '--chunk-size', '500');
+      args = chunkSizeResult.args;
+
+      const brain = await getBrain(brainName);
+      const { RAGPipeline } = await import('./rag/index.js');
+      const pipeline = new RAGPipeline(brain, {
+        chunkStrategy: strategyResult.value as any,
+        chunkSize: parseInt(chunkSizeResult.value),
+      });
+
+      console.log(`\n📄 Ingesting ${file}...`);
+      const result = await pipeline.ingestFile(file, slugResult.value || undefined);
+      console.log(`✅ Ingested: ${result.chunks} chunks, ~${result.tokens} tokens\n`);
+      await brain.disconnect();
+      break;
+    }
+
+    case 'retrieve': {
+      const retrieveQuery = args[1];
+      if (!retrieveQuery) { console.error('Usage: deepbrain retrieve <query> [--top-k 5] [--rerank]'); break; }
+
+      const topKResult = extractFlag(args, '--top-k', '5');
+      args = topKResult.args;
+      const rerankPresent = args.includes('--rerank');
+
+      const brain = await getBrain(brainName);
+      const { RAGPipeline } = await import('./rag/index.js');
+      const pipeline = new RAGPipeline(brain, { rerank: rerankPresent });
+
+      const results = await pipeline.retrieve(retrieveQuery, { topK: parseInt(topKResult.value) });
+      console.log(`\n🔍 RAG Retrieve: "${retrieveQuery}" (${results.length} results)\n`);
+      for (const r of results) {
+        console.log(`  [${r.rerankedScore.toFixed(3)}] ${r.content.slice(0, 120)}...`);
+      }
+      console.log('');
+      await brain.disconnect();
+      break;
+    }
+
     default:
       console.log(`
 🧠 DeepBrain - Personal AI Brain
@@ -1895,6 +1944,8 @@ Commands:
   deepbrain restore <file.zip>           Restore brain from backup
   deepbrain templates                    List available brain templates
   deepbrain batch-import <dir>           Batch import .md files (fast)
+  deepbrain ingest <file>                RAG ingest (parse → chunk → embed)
+  deepbrain retrieve <query>             RAG retrieve (search → rerank)
   deepbrain mcp                          MCP server info
   deepbrain plugin list|add|remove       Manage plugins
 
