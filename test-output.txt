@@ -1,0 +1,122 @@
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/mingjwan/tmp-deepbrain-check[39m
+
+[90mstdout[2m | tests/ui.test.ts[2m > [22m[2mBrainUI
+[22m[39m≡ƒºá DeepBrain UI ΓåÆ http://localhost:14001
+
+ [32mΓ£ô[39m tests/types.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32mΓ£ô[39m tests/adapters.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32mΓ£ô[39m test/evolve.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32mΓ£ô[39m tests/ui.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32mΓ£ô[39m tests/shimo.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32mΓ£ô[39m tests/feishu.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+ [32mΓ£ô[39m tests/wechat.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 87[2mms[22m[39m
+ [32mΓ£ô[39m tests/yuque.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 107[2mms[22m[39m
+ [32mΓ£ô[39m tests/rag.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [2m[90mΓåô[39m[22m tests/brain.test.ts [2m([22m[2m16 tests[22m[2m | [22m[33m16 skipped[39m[2m)[22m
+ [2m[90mΓåô[39m[22m tests/dream.test.ts [2m([22m[2m2 tests[22m[2m | [22m[33m2 skipped[39m[2m)[22m
+ [2m[90mΓåô[39m[22m tests/obsidian.test.ts [2m([22m[2m11 tests[22m[2m | [22m[33m11 skipped[39m[2m)[22m
+ [2m[90mΓåô[39m[22m tests/notion.test.ts [2m([22m[2m12 tests[22m[2m | [22m[33m12 skipped[39m[2m)[22m
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream returns a report with timestamps
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 2
+   Chunks: 2 (2 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: { note: [33m2[39m }
+
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream with empty brain does not crash
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 0
+   Chunks: 0 (0 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: {}
+
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream with specific tasks only runs those
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 2
+   Chunks: 2 (2 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: { note: [33m2[39m }
+
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream default config uses all tasks
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 2
+   Chunks: 2 (2 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: { note: [33m2[39m }
+
+ [32mΓ£ô[39m tests/agent-brain.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 12420[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m AgentBrain[2m > [22mevolve() marks traces as evolved [33m 4948[2mms[22m[39m
+ [31mΓ¥»[39m tests/comprehensive.test.ts [2m([22m[2m46 tests[22m[2m | [22m[31m9 failed[39m[2m)[22m[33m 24683[2mms[22m[39m
+   [32mΓ£ô[39m Dream Cycle (mocked)[2m > [22mdream returns a report with timestamps[32m 126[2mms[22m[39m
+   [32mΓ£ô[39m Dream Cycle (mocked)[2m > [22mdream refreshes stale pages[32m 77[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Dream Cycle (mocked)[2m > [22mdream with empty brain does not crash [33m 4785[2mms[22m[39m
+   [32mΓ£ô[39m Dream Cycle (mocked)[2m > [22mdream with specific tasks only runs those[32m 63[2mms[22m[39m
+   [32mΓ£ô[39m Dream Cycle (mocked)[2m > [22mdream with batchSize=1 limits refresh count[32m 40[2mms[22m[39m
+   [32mΓ£ô[39m Dream Cycle (mocked)[2m > [22mdream default config uses all tasks[32m 108[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mgetPageTier returns correct tier from frontmatter[32m 15[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mgetPageTier defaults to archival when no tier set[32m 8[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mgetByTier filters correctly[32m 8[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mgetTierStats counts all tiers[32m 7[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22msetTier changes page tier[32m 38[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22msetTier throws for nonexistent page[32m 8[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mrecordAccess increments access_count[32m 39[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mrecordAccess on nonexistent page does nothing[32m 8[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mrunTierCycle promotes high-access pages[32m 30[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mrunTierCycle demotes old unused pages[32m 29[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mgetCoreContext returns formatted string for core pages[32m 7[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Memory Tiers[2m > [22mgetCoreContext returns empty for brain with no core pages [33m 4245[2mms[22m[39m
+   [32mΓ£ô[39m Memory Tiers[2m > [22mDEFAULT_TIER_CONFIG has sensible defaults[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Knowledge Graph (mocked)[2m > [22mextractEntities returns entities and relationships[32m 1[2mms[22m[39m
+   [32mΓ£ô[39m Knowledge Graph (mocked)[2m > [22mextractEntities handles empty text[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Knowledge Graph (mocked)[2m > [22mextractEntities truncates long text[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m RAG Pipeline Edge Cases[2m > [22mingest splits content into chunks[32m 84[2mms[22m[39m
+   [32mΓ£ô[39m RAG Pipeline Edge Cases[2m > [22mingest with tags stores them[32m 82[2mms[22m[39m
+   [32mΓ£ô[39m RAG Pipeline Edge Cases[2m > [22mretrieve returns results array[32m 20[2mms[22m[39m
+   [32mΓ£ô[39m RAG Pipeline Edge Cases[2m > [22mingest empty content does not crash[32m 23[2mms[22m[39m
+   [32mΓ£ô[39m RAG Pipeline Edge Cases[2m > [22mpipeline with custom options constructs[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m RAG Chunker Edge Cases[2m > [22mempty string produces no chunks or single empty chunk[32m 0[2mms[22m[39m
+[31m   [31m├ù[31m RAG Chunker Edge Cases[2m > [22msingle word produces one chunk[39m[32m 9[2mms[22m[39m
+[31m     ΓåÆ expected [] to include 'hello'[39m
+   [32mΓ£ô[39m RAG Chunker Edge Cases[2m > [22msentence strategy splits on sentences[32m 0[2mms[22m[39m
+[31m   [31m├ù[31m RAG Chunker Edge Cases[2m > [22mvery small chunkSize still works[39m[32m 1[2mms[22m[39m
+[31m     ΓåÆ expected 0 to be greater than 1[39m
+[31m   [31m├ù[31m RAG Reranker Edge Cases[2m > [22mrerank empty results returns empty[39m[32m 0[2mms[22m[39m
+[31m     ΓåÆ reranker.rerank is not a function[39m
+[31m   [31m├ù[31m RAG Reranker Edge Cases[2m > [22mrerank with keyword strategy scores by overlap[39m[32m 0[2mms[22m[39m
+[31m     ΓåÆ reranker.rerank is not a function[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22mextractKeywords from empty string[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22mextractKeywords filters short words[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22msimilarity of identical sets is 1[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22msimilarity of disjoint sets is 0[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22msimilarity of empty sets is 0[32m 0[2mms[22m[39m
+[31m   [31m├ù[31m Evolve Edge Cases[2m > [22mclusterTraces groups similar traces[39m[32m 1[2mms[22m[39m
+[31m     ΓåÆ actual value must be number or bigint, received "undefined"[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22mclusterTraces with empty input returns empty[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22mdedupSentences removes exact duplicates[32m 0[2mms[22m[39m
+   [32mΓ£ô[39m Evolve Edge Cases[2m > [22mdedupSentences with empty input returns empty[32m 0[2mms[22m[39m
+[31m   [31m├ù[31m Evolve Edge Cases[2m > [22mconsolidateMerge joins texts[39m[32m 1[2mms[22m[39m
+[31m     ΓåÆ Cannot read properties of undefined (reading 'split')[39m
+[31m   [31m├ù[31m Evolve Edge Cases[2m > [22mconsolidateMerge with single item[39m[32m 0[2mms[22m[39m
+[31m     ΓåÆ Cannot read properties of undefined (reading 'split')[39m
+[31m   [31m├ù[31m Evolve Edge Cases[2m > [22mconsolidateSummarize returns non-empty for input[39m[32m 0[2mms[22m[39m
+[31m     ΓåÆ t.keywords is not iterable[39m
+[31m   [31m├ù[31m Evolve Edge Cases[2m > [22mconsolidateExtract returns non-empty for input[39m[32m 0[2mms[22m[39m
+[31m     ΓåÆ Cannot read properties of undefined (reading 'split')[39m
+ [32mΓ£ô[39m tests/brain-core.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 27971[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mdouble connect does not crash [33m 5860[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mdisconnect works [33m 4429[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mmultiple pages: list returns correct count [33m 4324[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mround-trip: put ΓåÆ export ΓåÆ import ΓåÆ get matches [33m 4505[2mms[22m[39m

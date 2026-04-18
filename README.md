@@ -4,7 +4,7 @@
 
 **Agent 的大脑 — 会学习、会进化的知识引擎**
 
-[![npm version](https://img.shields.io/npm/v/deepbrain)](https://www.npmjs.com/package/deepbrain)
+[![npm version](https://img.shields.io/badge/npm-v1.10.0-blue)](https://www.npmjs.com/package/deepbrain)
 [![License](https://img.shields.io/badge/License-LGPL_3.0-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 
@@ -80,12 +80,63 @@ const report = await agent.evolve();
 // → 把 50 条零散经验提炼成 3 条知识
 ```
 
+## 🏗️ 三层知识架构 (3-Tier Knowledge Architecture)
+
+DeepBrain 支持与 [Agent Workstation](https://github.com/Deepleaper/agent-workstation) 配合的三层知识种子体系：
+
+```
+🏭 行业知识 (Industry)    → 19 个行业分类，通用行业概念与最佳实践
+💼 岗位知识 (Job)         → 100 个岗位角色，岗位专业知识与方法论
+🔧 工位知识 (Workstation) → 100 个工位场景，SOP、常见问题、质量标准
+```
+
+通过 `BrainSeedLoader` 自动加载三层知识种子：
+
+```typescript
+import { Brain, BrainSeedLoader } from 'deepbrain';
+
+const brain = new Brain({ database: './my-brain.db' });
+await brain.connect();
+
+// 从 brain-seeds/ 目录自动加载三层种子
+const loader = new BrainSeedLoader(brain);
+await loader.loadFromDirectory('./brain-seeds/');
+// → 加载 industry.md, job.md, workstation.md
+```
+
+### 🔄 自下而上知识进化 (Bottom-Up Knowledge Evolution)
+
+知识不是静态的——DeepBrain 的 `KnowledgeEvolver` 实现自下而上的自动知识提炼：
+
+```
+工位知识 (Workstation)  →  岗位知识 (Job)  →  行业知识 (Industry)
+     具体经验沉淀            方法论提炼           行业最佳实践
+```
+
+```typescript
+import { KnowledgeEvolver } from 'deepbrain';
+
+const evolver = new KnowledgeEvolver(brain);
+
+// 工位级经验自动提炼为岗位级知识
+await evolver.evolveUp('workstation', 'job');
+
+// 岗位级知识自动提炼为行业级最佳实践
+await evolver.evolveUp('job', 'industry');
+```
+
+**飞轮效应**：越多 Agent 使用 → 工位经验越丰富 → 自动提炼更优的岗位和行业知识 → 新 Agent 起步更高。
+
+---
+
 ## 功能亮点
 
 | | 特性 | 说明 |
 |---|---|---|
 | 🧠 | **Brain（知识管理）** | `put` / `get` / `query` / `search` / `list` — 知识存储与检索 |
 | 🤖 | **AgentBrain（Agent 记忆）** | `learn` / `recall` / `evolve` — 让 Agent 越用越聪明 |
+| 🌱 | **BrainSeedLoader** | 三层知识种子自动加载，Agent 创建即有行业记忆 |
+| 🔄 | **KnowledgeEvolver** | 自下而上知识进化，工位→岗位→行业自动提炼 |
 | 📈 | **知识进化** | traces 聚类→合并→去重→沉淀，自动 evolve |
 | 🔍 | **RAG Pipeline** | `DocumentParser` + 5 种 Chunker + 4 种 Reranker，一站式文档智能 |
 | 🕸️ | **知识图谱** | 页面关联、标签、时间线，结构化知识网络 |
@@ -358,12 +409,58 @@ const report = await agent.evolve();
 // → Distills 50 scattered experiences into 3 pieces of knowledge
 ```
 
+## 3-Tier Knowledge Architecture
+
+DeepBrain supports a 3-tier knowledge seed system with [Agent Workstation](https://github.com/Deepleaper/agent-workstation):
+
+```
+🏭 Industry Knowledge   → 19 industry categories, universal concepts & best practices
+💼 Job Knowledge         → 100 job roles, professional knowledge & methodologies
+🔧 Workstation Knowledge → 100 workstation scenarios, SOPs, FAQs, quality standards
+```
+
+Auto-load 3-tier seeds via `BrainSeedLoader`:
+
+```typescript
+import { Brain, BrainSeedLoader } from 'deepbrain';
+
+const brain = new Brain({ database: './my-brain.db' });
+await brain.connect();
+
+const loader = new BrainSeedLoader(brain);
+await loader.loadFromDirectory('./brain-seeds/');
+// → Loads industry.md, job.md, workstation.md
+```
+
+### Bottom-Up Knowledge Evolution
+
+Knowledge isn't static — `KnowledgeEvolver` enables automatic bottom-up refinement:
+
+```
+Workstation → Job → Industry
+  concrete       methodology     best practices
+```
+
+```typescript
+import { KnowledgeEvolver } from 'deepbrain';
+
+const evolver = new KnowledgeEvolver(brain);
+await evolver.evolveUp('workstation', 'job');
+await evolver.evolveUp('job', 'industry');
+```
+
+**Flywheel effect**: More agents → richer workstation experience → auto-refined job/industry knowledge → new agents start smarter.
+
+---
+
 ## Feature Highlights
 
 | | Feature | Description |
 |---|---|---|
 | 🧠 | **Brain (Knowledge Management)** | `put` / `get` / `query` / `search` / `list` |
 | 🤖 | **AgentBrain (Agent Memory)** | `learn` / `recall` / `evolve` — agents get smarter over time |
+| 🌱 | **BrainSeedLoader** | Auto-load 3-tier knowledge seeds, no cold start |
+| 🔄 | **KnowledgeEvolver** | Bottom-up knowledge evolution: workstation → job → industry |
 | 📈 | **Knowledge Evolution** | Traces cluster → merge → deduplicate → distill, auto evolve |
 | 🔍 | **RAG Pipeline** | `DocumentParser` + 5 chunkers + 4 rerankers |
 | 🕸️ | **Knowledge Graph** | Page links, tags, timeline — structured knowledge network |

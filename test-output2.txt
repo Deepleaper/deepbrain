@@ -1,0 +1,85 @@
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/mingjwan/tmp-deepbrain-check[39m
+
+[90mstdout[2m | tests/ui.test.ts[2m > [22m[2mBrainUI
+[22m[39m≡ƒºá DeepBrain UI ΓåÆ http://localhost:14001
+
+ [32mΓ£ô[39m tests/wechat.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32mΓ£ô[39m tests/shimo.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32mΓ£ô[39m tests/ui.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32mΓ£ô[39m tests/types.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32mΓ£ô[39m tests/adapters.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32mΓ£ô[39m test/evolve.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32mΓ£ô[39m tests/yuque.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+ [32mΓ£ô[39m tests/feishu.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32mΓ£ô[39m tests/rag.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [2m[90mΓåô[39m[22m tests/dream.test.ts [2m([22m[2m2 tests[22m[2m | [22m[33m2 skipped[39m[2m)[22m
+ [2m[90mΓåô[39m[22m tests/brain.test.ts [2m([22m[2m16 tests[22m[2m | [22m[33m16 skipped[39m[2m)[22m
+ [2m[90mΓåô[39m[22m tests/obsidian.test.ts [2m([22m[2m11 tests[22m[2m | [22m[33m11 skipped[39m[2m)[22m
+ [2m[90mΓåô[39m[22m tests/notion.test.ts [2m([22m[2m12 tests[22m[2m | [22m[33m12 skipped[39m[2m)[22m
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream returns a report with timestamps
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 2
+   Chunks: 2 (2 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: { note: [33m2[39m }
+
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream with empty brain does not crash
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 0
+   Chunks: 0 (0 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: {}
+
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream with specific tasks only runs those
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 2
+   Chunks: 2 (2 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: { note: [33m2[39m }
+
+[90mstdout[2m | tests/comprehensive.test.ts[2m > [22m[2mDream Cycle (mocked)[2m > [22m[2mdream default config uses all tasks
+[22m[39m
+≡ƒºá DeepBrain Health Report
+   Pages: 2
+   Chunks: 2 (2 embedded)
+   Links: 0
+   Tags: 0
+   Timeline entries: 0
+   Types: { note: [33m2[39m }
+
+ [32mΓ£ô[39m tests/agent-brain.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 12623[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m AgentBrain[2m > [22mevolve() marks traces as evolved [33m 5000[2mms[22m[39m
+ [32mΓ£ô[39m tests/comprehensive.test.ts [2m([22m[2m46 tests[22m[2m)[22m[33m 25196[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Dream Cycle (mocked)[2m > [22mdream with empty brain does not crash [33m 4810[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Memory Tiers[2m > [22mgetCoreContext returns empty for brain with no core pages [33m 4573[2mms[22m[39m
+ [32mΓ£ô[39m tests/brain-core.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 28666[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mdouble connect does not crash [33m 5970[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mdisconnect works [33m 4586[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mmultiple pages: list returns correct count [33m 4676[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Brain Core (no API key)[2m > [22mround-trip: put ΓåÆ export ΓåÆ import ΓåÆ get matches [33m 4407[2mms[22m[39m
+ [32mΓ£ô[39m tests/export-import.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 68170[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mexport empty brain returns empty arrays [33m 6045[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mexport brain with pages [33m 4806[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mimport into fresh brain [33m 9323[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mimport with links [33m 8876[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mimport with timeline entries [33m 7959[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mimport duplicate pages upserts [33m 3971[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mround-trip preserves page types [33m 8033[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mround-trip preserves frontmatter [33m 8557[2mms[22m[39m
+   [33m[2mΓ£ô[22m[39m Export / Import[2m > [22mimport empty data does not crash [33m 4272[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m13 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (17)[39m
+[2m      Tests [22m [1m[32m194 passed[39m[22m[2m | [22m[33m41 skipped[39m[90m (235)[39m
+[2m   Start at [22m 15:29:05
+[2m   Duration [22m 69.56s[2m (transform 3.16s, setup 0ms, collect 8.58s, tests 134.98s, environment 5ms, prepare 5.23s)[22m
+
