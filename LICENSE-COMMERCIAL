@@ -4,8 +4,7 @@ DeepBrain is available under a commercial license for organizations that:
 - Want to use DeepBrain in closed-source proprietary products
 - Want to modify DeepBrain without open-sourcing changes
 - Need dedicated technical support and SLA guarantees
-- Want priority access to new features
-- Want to remove the "Powered by Deepleaper (跃盟科技)" attribution requirement
+- Want priority access to new features and updates
 
 For commercial licensing inquiries:
 - Email: licensing@deepleaper.com
@@ -20,7 +19,7 @@ Q: Can I use DeepBrain in my commercial application?
 A: Yes, as long as you dynamically link and don't modify the library. If you modify DeepBrain source code, those modifications must be open-sourced under LGPL-3.0.
 
 Q: When do I need a commercial license?
-A: When you want to modify DeepBrain and keep modifications proprietary, or when you want to statically link it into a closed-source product.
+A: When you want to modify DeepBrain and keep modifications proprietary, or when you want to statically embed it into a closed-source product.
 
 Q: Can I remove the "Powered by Deepleaper" attribution?
 A: Only with a commercial license. The open-source LGPL license requires visible attribution to Deepleaper (跃盟科技).
