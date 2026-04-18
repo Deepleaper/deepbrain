@@ -322,6 +322,18 @@ deepbrain dream                                              # Maintenance cycle
 deepbrain stats                                              # View statistics
 ```
 
+## Examples
+
+See the `examples/` directory for runnable demos:
+
+| # | File | Description |
+|---|------|-------------|
+| 01 | `basic-learn-recall.ts` | Basic learn/recall usage |
+| 02 | `evolve-demo.ts` | Knowledge evolution (evolve) |
+| 07 | `07-export-import.ts` | Brain backup & restore via export/import |
+| 08 | `08-stats-search.ts` | Brain stats and keyword search |
+| 09 | `09-multi-brain.ts` | Multiple isolated brains (L1 concept) |
+
 ## Architecture
 
 ```
